@@ -14,6 +14,37 @@ interface CreateSectionProps {
   onLogout: () => void;
 }
 
+// ជួសជុលបញ្ហា Type Error ដោយការយក SubjectCard ចេញពី CreateSection និងកំណត់ Type ឱ្យត្រឹមត្រូវសម្រាប់ React Component
+// This fixes the 'Property key does not exist' error by making SubjectCard a top-level React.FC
+const SubjectCard: React.FC<{
+  sub: { name: string, isActive: boolean, count: number, type: 'mcq' | 'short' };
+  onToggleSubject: (subject: string, type: 'mcq' | 'short', active: boolean) => void;
+  onRemoveSubject: (subject: string, type: 'mcq' | 'short') => void;
+}> = ({ sub, onToggleSubject, onRemoveSubject }) => (
+  <div className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${sub.isActive ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-gray-200 grayscale opacity-60'}`}>
+    <div>
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-lg font-black heading-kh text-maroon truncate max-w-[150px]">{sub.name}</h3>
+        <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
+      </div>
+    </div>
+    <div className="flex gap-2">
+      <button 
+        onClick={() => onToggleSubject(sub.name, sub.type, !sub.isActive)}
+        className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${sub.isActive ? 'bg-maroon/5 text-maroon hover:bg-maroon hover:text-white' : 'bg-green-500 text-white hover:brightness-110'}`}
+      >
+        {sub.isActive ? '❌ បិទមុខវិជ្ជា' : '✅ បើកមុខវិជ្ជា'}
+      </button>
+      <button 
+        onClick={() => onRemoveSubject(sub.name, sub.type)}
+        className="px-4 py-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+      >
+        🗑️
+      </button>
+    </div>
+  </div>
+);
+
 const CreateSection: React.FC<CreateSectionProps> = ({ 
   quizData, onAdd, onUpdate, onRemove, onToggleSubject, onRemoveSubject, onBatchAdd
 }) => {
@@ -128,31 +159,6 @@ const CreateSection: React.FC<CreateSectionProps> = ({
     } else alert("រកមិនឃើញទម្រង់សំណួរត្រឹមត្រូវ!");
   };
 
-  const SubjectCard = ({ sub }: { sub: { name: string, isActive: boolean, count: number, type: 'mcq' | 'short' } }) => (
-    <div className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${sub.isActive ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-gray-200 grayscale opacity-60'}`}>
-      <div>
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-black heading-kh text-maroon truncate max-w-[150px]">{sub.name}</h3>
-          <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button 
-          onClick={() => onToggleSubject(sub.name, sub.type, !sub.isActive)}
-          className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${sub.isActive ? 'bg-maroon/5 text-maroon hover:bg-maroon hover:text-white' : 'bg-green-500 text-white hover:brightness-110'}`}
-        >
-          {sub.isActive ? '❌ បិទមុខវិជ្ជា' : '✅ បើកមុខវិជ្ជា'}
-        </button>
-        <button 
-          onClick={() => onRemoveSubject(sub.name, sub.type)}
-          className="px-4 py-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
-        >
-          🗑️
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-8 animate-fadeIn pb-20">
       <div className="glass-card rounded-[2.5rem] shadow-xl p-8 border border-white/50">
@@ -241,7 +247,7 @@ const CreateSection: React.FC<CreateSectionProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {groupedSubjects.mcq.map((sub, i) => (
-                  <SubjectCard key={`mcq-${i}`} sub={sub} />
+                  <SubjectCard key={`mcq-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} />
                 ))}
                 {groupedSubjects.mcq.length === 0 && (
                   <div className="col-span-full py-10 text-center text-gray-400 italic bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 small-kh">មិនទាន់មានមុខវិជ្ជាក្នុងផ្នែកនេះឡើយ</div>
@@ -257,7 +263,7 @@ const CreateSection: React.FC<CreateSectionProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {groupedSubjects.short.map((sub, i) => (
-                  <SubjectCard key={`short-${i}`} sub={sub} />
+                  <SubjectCard key={`short-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} />
                 ))}
                 {groupedSubjects.short.length === 0 && (
                   <div className="col-span-full py-10 text-center text-gray-400 italic bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 small-kh">មិនទាន់មានមុខវិជ្ជាក្នុងផ្នែកនេះឡើយ</div>

@@ -13,10 +13,15 @@ interface QuizGameProps {
 
 const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjectQuestions, onExit }) => {
   const KHMER_PREFIXES = ['ក', 'ខ', 'គ', 'ឃ'];
+  const KHMER_DIGITS = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+  
+  const toKhmerNumeral = (n: number) => {
+    return n.toString().split('').map(digit => KHMER_DIGITS[parseInt(digit)] || digit).join('');
+  };
+
   const SOUND_URLS = {
     correct: 'https://assets.mixkit.co/active_storage/sfx/600/600-preview.mp3',
-    wrong: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3',
-    reveal: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'
+    wrong: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'
   };
 
   const [isMuted, setIsMuted] = useState(false);
@@ -47,7 +52,6 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
         return q;
       }).sort(() => Math.random() - 0.5);
     }
-    // For short answer, keep the original order for easier studying
     return subset;
   }, [allSubjectQuestions, partIndex, type]);
 
@@ -99,62 +103,69 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
     } else setState(prev => ({ ...prev, isFinished: true }));
   };
 
-  // Short Answer List View
+  // --- SHORT ANSWER LIST VIEW ---
   if (type === 'short') {
     return (
-      <div className="animate-fadeIn space-y-6">
-        {/* Header for List View */}
-        <div className="glass-card rounded-[2.5rem] p-6 md:p-8 flex items-center justify-between border border-white/50">
+      <div className="animate-fadeIn space-y-6 pb-20">
+        {/* Header */}
+        <div className="glass-card rounded-[2.5rem] p-6 md:p-8 flex items-center justify-between border border-white/50 sticky top-4 z-20 shadow-xl">
           <div className="flex items-center gap-4">
-            <button onClick={onExit} className="w-12 h-12 flex items-center justify-center bg-maroon/5 text-maroon rounded-2xl hover:bg-maroon hover:text-white transition-all">
+            <button onClick={onExit} className="w-12 h-12 flex items-center justify-center bg-maroon/5 text-maroon rounded-2xl hover:bg-maroon hover:text-white transition-all shadow-sm">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <div>
-              <h2 className="text-xl md:text-2xl font-black heading-kh text-maroon">{subject}</h2>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">ភាគទី {partIndex + 1} - កម្រងសំណួរចម្លើយខ្លីៗ</p>
+              <h2 className="text-xl md:text-2xl font-black heading-kh text-maroon leading-tight">{subject}</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">ភាគទី {toKhmerNumeral(partIndex + 1)} - កម្រងសំណួរចម្លើយ</p>
             </div>
           </div>
-          <div className="hidden sm:block bg-maroon text-white px-5 py-2 rounded-full font-black text-xs uppercase shadow-lg shadow-maroon/20">
-            សរុប៖ {partQuestions.length} សំណួរ
+          <div className="hidden sm:block bg-maroon text-white px-5 py-2.5 rounded-full font-black text-xs uppercase shadow-lg shadow-maroon/20">
+            សរុប៖ {toKhmerNumeral(partQuestions.length)} សំណួរ
           </div>
         </div>
 
-        {/* The List */}
-        <div className="space-y-6 pb-20">
+        {/* Content List */}
+        <div className="space-y-8">
           {partQuestions.map((q, idx) => (
-            <div key={idx} className="glass-card rounded-[2.5rem] p-8 md:p-10 border border-white/60 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-1">
-              <div className="flex gap-4 items-start mb-6">
-                <span className="shrink-0 w-10 h-10 bg-maroon text-white flex items-center justify-center rounded-xl font-black text-sm">
-                  {idx + 1}
+            <div key={idx} className="glass-card rounded-[2.5rem] p-8 md:p-12 border border-white/60 shadow-xl transition-all hover:shadow-2xl">
+              {/* Question Row */}
+              <div className="flex gap-2 items-start mb-6">
+                <span className="text-xl md:text-2xl font-black heading-kh text-maroon shrink-0">
+                  {toKhmerNumeral(idx + 1)}.
                 </span>
-                <h3 className="text-lg md:text-xl font-bold heading-kh text-maroon leading-relaxed">
+                <h3 className="text-xl md:text-2xl font-black heading-kh text-maroon leading-relaxed">
                   {q.question}
                 </h3>
               </div>
-              <div className="bg-green-50/50 border-2 border-green-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                  <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+
+              {/* Answer Content */}
+              <div className="bg-green-50/40 border-l-8 border-green-500 rounded-r-[2rem] p-6 md:p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
+                  <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd"></path></svg>
                 </div>
-                <div className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-3 heading-kh">ចម្លើយ ៖</div>
-                <div className="text-gray-800 leading-loose small-kh font-medium text-base md:text-lg">
-                  {q.answer}
+                
+                <div className="flex flex-col md:flex-row gap-2">
+                  <span className="shrink-0 font-black text-green-700 heading-kh text-lg md:text-xl">ចម្លើយ ៖</span>
+                  <div className="flex-1 text-gray-800 leading-loose small-kh font-medium text-lg md:text-xl whitespace-pre-wrap">
+                    {q.answer}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Bottom Back Button */}
-          <div className="flex justify-center pt-6">
-            <button onClick={onExit} className="bg-maroon text-white font-black px-12 py-5 rounded-[2rem] shadow-2xl shadow-maroon/30 hover:scale-105 transition-all heading-kh text-lg">
+          {/* Footer Navigation */}
+          <div className="flex flex-col items-center gap-4 pt-10">
+            <button onClick={onExit} className="bg-maroon text-white font-black px-16 py-5 rounded-[2.5rem] shadow-2xl shadow-maroon/30 hover:scale-105 active:scale-95 transition-all heading-kh text-xl">
               ត្រឡប់ទៅបញ្ជីភាគវិញ
             </button>
+            <p className="text-gray-400 text-xs small-kh italic">អាន និងទន្ទេញឱ្យបានច្រើនដងដើម្បីចងចាំបានល្អ</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // MCQ Game Logic
+  // --- MCQ GAME VIEW ---
   if (state.isReviewing) {
     return (
       <div className="glass-card rounded-[2.5rem] p-6 md:p-10 animate-fadeIn border-2 border-maroon/20 flex flex-col h-[85vh]">
@@ -166,7 +177,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
           {partQuestions.map((q, qIdx) => (
             <div key={qIdx} className="bg-white/50 p-6 rounded-3xl border border-gray-100">
               <h4 className="font-bold mb-4 heading-kh text-maroon flex gap-3">
-                <span className="shrink-0 bg-maroon/10 w-8 h-8 flex items-center justify-center rounded-lg">{qIdx + 1}</span>
+                <span className="shrink-0 bg-maroon/10 w-8 h-8 flex items-center justify-center rounded-lg">{toKhmerNumeral(qIdx + 1)}</span>
                 {q.question}
               </h4>
               <div className="grid gap-2">
@@ -194,8 +205,8 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
       <div className="glass-card rounded-[3rem] p-12 text-center animate-fadeIn">
         <div className="text-8xl mb-6">🏆</div>
         <h2 className="text-3xl font-black mb-4 heading-kh text-maroon">លទ្ធផល</h2>
-        <div className="text-8xl font-black text-indigo-600 my-8 tabular-nums">{percentage}%</div>
-        <p className="text-xl mb-12 small-kh text-gray-600">អ្នកឆ្លើយត្រូវ {state.score} / {partQuestions.length}</p>
+        <div className="text-8xl font-black text-indigo-600 my-8 tabular-nums">{toKhmerNumeral(percentage)}%</div>
+        <p className="text-xl mb-12 small-kh text-gray-600">អ្នកឆ្លើយត្រូវ {toKhmerNumeral(state.score)} / {toKhmerNumeral(partQuestions.length)}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto">
           <button onClick={() => setState(prev => ({ ...prev, isReviewing: true }))} className="w-full bg-white border-2 border-maroon text-maroon font-black py-4 rounded-2xl shadow-md">ពិនិត្យចម្លើយ 👁️</button>
           <button onClick={onExit} className="w-full bg-maroon text-white font-black py-4 rounded-2xl shadow-xl">ត្រឡប់ទៅវិញ 🏠</button>
@@ -211,8 +222,8 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
         <div className="flex flex-col">
           <span className="text-maroon font-black text-[10px] uppercase tracking-widest opacity-60">{subject} - QCM</span>
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-black text-maroon">{state.currentQuestionIndex + 1}</span>
-            <span className="text-sm font-bold text-gray-400 mb-1">/ {partQuestions.length}</span>
+            <span className="text-4xl font-black text-maroon">{toKhmerNumeral(state.currentQuestionIndex + 1)}</span>
+            <span className="text-sm font-bold text-gray-400 mb-1">/ {toKhmerNumeral(partQuestions.length)}</span>
           </div>
         </div>
         
@@ -220,7 +231,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
           <button onClick={() => setIsMuted(!isMuted)} className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all shadow-md ${isMuted ? 'bg-gray-100 text-gray-400' : 'bg-maroon/5 text-maroon'}`}>
             {isMuted ? '🔇' : '🔊'}
           </button>
-          <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-lg font-black text-xl tabular-nums">ពិន្ទុ៖ {state.score}</div>
+          <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-lg font-black text-xl tabular-nums">ពិន្ទុ៖ {toKhmerNumeral(state.score)}</div>
           <button onClick={() => { if(confirm("ចាកចេញ?")) onExit(); }} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl">✕</button>
         </div>
       </div>
