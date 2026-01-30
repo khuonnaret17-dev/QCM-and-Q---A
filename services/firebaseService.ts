@@ -1,6 +1,8 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
+// Fix: Use separate type import for Firestore and named imports for values to resolve "no exported member" errors.
+import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
 import { Question } from '../types';
 
 const firebaseConfig = {
@@ -13,25 +15,31 @@ const firebaseConfig = {
   measurementId: "G-MQJYZ5ME91"
 };
 
-let db: any = null;
+let db: Firestore | null = null;
 
-export const initFirebase = () => {
+/**
+ * Initializes Firebase and Firestore.
+ */
+export const initFirebase = (): Firestore | null => {
+  if (db) return db;
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    db = initializeFirestore(app, {
-      experimentalForceLongPolling: true,
-      useFetchStreams: false 
-    });
+    db = getFirestore(app);
     return db;
   } catch (e) {
-    console.error("Firebase initialization failed:", e);
+    console.error("Firebase/Firestore initialization failed:", e);
     return null;
   }
 };
 
+/**
+ * Syncs the current local question state to the Firebase cloud database.
+ */
 export const syncQuestionsToFirebase = async (questions: Question[], subjectOrder?: { mcq: string[], short: string[] }) => {
-  if (!db) throw new Error("Database not initialized");
-  const quizRef = doc(db, 'config', 'questions_data');
+  const database = initFirebase();
+  if (!database) throw new Error("Firestore instance not available");
+  
+  const quizRef = doc(database, 'config', 'questions_data');
   await setDoc(quizRef, { 
     questions, 
     subjectOrder: subjectOrder || { mcq: [], short: [] },
@@ -39,16 +47,23 @@ export const syncQuestionsToFirebase = async (questions: Question[], subjectOrde
   });
 };
 
+/**
+ * Sets up a real-time listener for the question data in Firebase.
+ */
 export const listenToQuestions = (
   onUpdate: (questions: Question[], subjectOrder?: { mcq: string[], short: string[] }) => void, 
   onError: (error: any) => void
 ) => {
-  if (!db) {
-    onError(new Error("No DB"));
-    return () => {};
+  const database = initFirebase();
+  if (!database) {
+    const retryTimeout = setTimeout(() => {
+      const dbRetry = initFirebase();
+      if (!dbRetry) onError(new Error("Firestore service is unavailable."));
+    }, 2000);
+    return () => clearTimeout(retryTimeout);
   }
   
-  const quizRef = doc(db, 'config', 'questions_data');
+  const quizRef = doc(database, 'config', 'questions_data');
   
   return onSnapshot(quizRef, 
     (docSnap) => {
@@ -60,6 +75,7 @@ export const listenToQuestions = (
       }
     },
     (error) => {
+      console.error("Firestore listen error:", error);
       onError(error);
     }
   );

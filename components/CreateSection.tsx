@@ -12,48 +12,71 @@ interface CreateSectionProps {
   onToggleSubject: (subject: string, type: 'mcq' | 'short', active: boolean) => void;
   onRemoveSubject: (subject: string, type: 'mcq' | 'short') => void;
   onReorderSubject: (type: 'mcq' | 'short', direction: 'up' | 'down', subjectName: string) => void;
+  onUpdateSubjectOrder: (type: 'mcq' | 'short', newOrder: string[]) => void;
   onBatchAdd: (qs: Question[]) => void;
   onLogout: () => void;
 }
 
+// Fixed: Removed onReorderSubject from SubjectCard props as it is no longer used by this component
 const SubjectCard: React.FC<{
   sub: { name: string, isActive: boolean, count: number, type: 'mcq' | 'short' };
+  index: number;
+  isDragging: boolean;
   onToggleSubject: (subject: string, type: 'mcq' | 'short', active: boolean) => void;
   onRemoveSubject: (subject: string, type: 'mcq' | 'short') => void;
-  onReorderSubject: (type: 'mcq' | 'short', direction: 'up' | 'down', subjectName: string) => void;
-}> = ({ sub, onToggleSubject, onRemoveSubject, onReorderSubject }) => (
-  <div className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${sub.isActive ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-gray-200 grayscale opacity-60'}`}>
-    <div>
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-black heading-kh text-maroon truncate max-w-[150px]">{sub.name}</h3>
-        <div className="flex flex-col gap-1 items-end">
-           <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
-           <div className="flex gap-1 mt-2">
-              <button onClick={() => onReorderSubject(sub.type, 'up', sub.name)} className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-maroon hover:text-white rounded-lg transition-all text-xs">↑</button>
-              <button onClick={() => onReorderSubject(sub.type, 'down', sub.name)} className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-maroon hover:text-white rounded-lg transition-all text-xs">↓</button>
-           </div>
+  onDragStart: (e: React.DragEvent, index: number) => void;
+  onDragOver: (e: React.DragEvent, index: number) => void;
+  onDragEnd: () => void;
+}> = ({ sub, index, isDragging, onToggleSubject, onRemoveSubject, onDragStart, onDragOver, onDragEnd }) => {
+  const [isOver, setIsOver] = useState(false);
+
+  return (
+    <div 
+      draggable
+      onDragStart={(e) => onDragStart(e, index)}
+      onDragOver={(e) => { e.preventDefault(); setIsOver(true); onDragOver(e, index); }}
+      onDragLeave={() => setIsOver(false)}
+      onDragEnd={() => { setIsOver(false); onDragEnd(); }}
+      onDrop={() => setIsOver(false)}
+      className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing relative 
+        ${isOver ? 'drag-over' : ''} 
+        ${isDragging ? 'dragging-item' : ''}
+        ${sub.isActive ? 'bg-white border-gray-100 shadow-sm hover:shadow-md' : 'bg-gray-100 border-gray-200 grayscale opacity-60'}`}
+    >
+      <div className="pointer-events-none">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2 overflow-hidden">
+             <div className="text-gray-300">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 7a2 2 0 100-4 2 2 0 000 4zM13 7a2 2 0 100-4 2 2 0 000 4zM7 11a2 2 0 100-4 2 2 0 000 4zM13 11a2 2 0 100-4 2 2 0 000 4zM7 15a2 2 0 100-4 2 2 0 000 4zM13 15a2 2 0 100-4 2 2 0 000 4z"/></svg>
+             </div>
+             <h3 className="text-lg font-black heading-kh text-maroon truncate">{sub.name}</h3>
+          </div>
+          <div className="flex flex-col gap-1 items-end">
+             <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
+          </div>
         </div>
       </div>
+      
+      <div className="flex gap-2 mt-4 pointer-events-auto">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onToggleSubject(sub.name, sub.type, !sub.isActive); }}
+          className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${sub.isActive ? 'bg-maroon/5 text-maroon hover:bg-maroon hover:text-white' : 'bg-green-500 text-white hover:brightness-110'}`}
+        >
+          {sub.isActive ? '❌ បិទមុខវិជ្ជា' : '✅ បើកមុខវិជ្ជា'}
+        </button>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onRemoveSubject(sub.name, sub.type); }}
+          className="px-4 py-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+        >
+          🗑️
+        </button>
+      </div>
     </div>
-    <div className="flex gap-2 mt-4">
-      <button 
-        onClick={() => onToggleSubject(sub.name, sub.type, !sub.isActive)}
-        className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${sub.isActive ? 'bg-maroon/5 text-maroon hover:bg-maroon hover:text-white' : 'bg-green-500 text-white hover:brightness-110'}`}
-      >
-        {sub.isActive ? '❌ បិទមុខវិជ្ជា' : '✅ បើកមុខវិជ្ជា'}
-      </button>
-      <button 
-        onClick={() => onRemoveSubject(sub.name, sub.type)}
-        className="px-4 py-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
-      >
-        🗑️
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 const CreateSection: React.FC<CreateSectionProps> = ({ 
-  quizData, subjectOrder, onAdd, onUpdate, onRemove, onToggleSubject, onRemoveSubject, onReorderSubject, onBatchAdd
+  quizData, subjectOrder, onAdd, onUpdate, onRemove, onToggleSubject, onRemoveSubject, onReorderSubject, onUpdateSubjectOrder, onBatchAdd
 }) => {
   const KHMER_PREFIXES = ['ក', 'ខ', 'គ', 'ឃ'];
   const [entryMode, setEntryMode] = useState<'single' | 'bulk' | 'subjects'>('single');
@@ -68,6 +91,25 @@ const CreateSection: React.FC<CreateSectionProps> = ({
   const [bulkText, setBulkText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (index: number, type: 'mcq' | 'short', currentOrder: string[]) => {
+    if (draggedIdx === null || draggedIdx === index) return;
+    
+    const newOrder = [...currentOrder];
+    const item = newOrder.splice(draggedIdx, 1)[0];
+    newOrder.splice(index, 0, item);
+    
+    setDraggedIdx(index);
+    onUpdateSubjectOrder(type, newOrder);
+  };
+
   const filteredQuestions = useMemo(() => {
     return quizData
       .map((q, originalIndex) => ({ ...q, originalIndex }))
@@ -81,7 +123,6 @@ const CreateSection: React.FC<CreateSectionProps> = ({
     const mcqRaw = Array.from(new Set(quizData.filter(q => q.type === 'mcq').map(q => q.subject)));
     const shortRaw = Array.from(new Set(quizData.filter(q => q.type === 'short').map(q => q.subject)));
 
-    // Sort based on subjectOrder or append new ones at end
     const mcqSorted = [...(subjectOrder.mcq || [])].filter(s => mcqRaw.includes(s));
     mcqRaw.forEach(s => { if(!mcqSorted.includes(s)) mcqSorted.push(s); });
 
@@ -104,10 +145,7 @@ const CreateSection: React.FC<CreateSectionProps> = ({
   }, [quizData, subjectOrder]);
 
   const handleSubmitSingle = () => {
-    if (!subject.trim() || !question.trim()) {
-      return alert("សូមបំពេញព័ត៌មានសំណួរឱ្យបានគ្រប់គ្រាន់!");
-    }
-
+    if (!subject.trim() || !question.trim()) return alert("សូមបំពេញព័ត៌មានសំណួរឱ្យបានគ្រប់គ្រាន់!");
     let newQ: Question;
     if (qType === 'mcq') {
       if (options.some(o => !o.trim())) return alert("សូមបំពេញជម្រើសចម្លើយឱ្យគ្រប់!");
@@ -116,10 +154,8 @@ const CreateSection: React.FC<CreateSectionProps> = ({
       if (!shortAnswer.trim()) return alert("សូមបំពេញចម្លើយត្រឹមត្រូវ!");
       newQ = { type: 'short', subject: subject.trim(), question: question.trim(), answer: shortAnswer.trim(), isActive: true };
     }
-
     if (editingIndex !== null) onUpdate(editingIndex, newQ);
     else onAdd(newQ);
-    
     setQuestion(''); setOptions(['', '', '', '']); setShortAnswer(''); setEditingIndex(null);
   };
 
@@ -128,7 +164,6 @@ const CreateSection: React.FC<CreateSectionProps> = ({
     const lines = bulkText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const parsed: Question[] = [];
     let cur: Partial<Question> | null = null;
-
     if (bulkType === 'mcq') {
       lines.forEach(line => {
         const qMatch = line.match(/^[០-៩0-9]+\.\s*(.*)/);
@@ -161,7 +196,6 @@ const CreateSection: React.FC<CreateSectionProps> = ({
       });
       if (cur && cur.question && cur.answer) parsed.push(cur as Question);
     }
-    
     if (parsed.length > 0) {
       onBatchAdd(parsed);
       setBulkText('');
@@ -247,31 +281,59 @@ const CreateSection: React.FC<CreateSectionProps> = ({
         {entryMode === 'subjects' && (
           <div className="space-y-12 animate-fadeIn">
             <div className="space-y-6">
-              <div className="flex items-center gap-3 border-l-4 border-blue-500 pl-4">
-                <h2 className="text-xl font-black heading-kh text-blue-800">🔘 ផ្នែកសំណួរពហុចម្លើយ</h2>
-                <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black">{groupedSubjects.mcq.length} មុខវិជ្ជា</span>
+              <div className="flex flex-col border-l-4 border-blue-500 pl-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-black heading-kh text-blue-800">🔘 ផ្នែកសំណួរពហុចម្លើយ</h2>
+                  <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black">{groupedSubjects.mcq.length} មុខវិជ្ជា</span>
+                </div>
+                <span className="text-[10px] text-gray-400 small-kh italic mt-1">ទាញកាតមុខវិជ្ជាដើម្បីរៀបលំដាប់លំដោយ (Drag to Reorder)</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupedSubjects.mcq.map((sub, i) => (
-                  <SubjectCard key={`mcq-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} onReorderSubject={onReorderSubject} />
+                  <SubjectCard 
+                    key={`mcq-${sub.name}`} 
+                    sub={sub} 
+                    index={i}
+                    isDragging={draggedIdx === i}
+                    onToggleSubject={onToggleSubject} 
+                    onRemoveSubject={onRemoveSubject} 
+                    onDragStart={handleDragStart}
+                    onDragOver={(e, idx) => handleDragOver(idx, 'mcq', groupedSubjects.mcq.map(s => s.name))}
+                    onDragEnd={() => setDraggedIdx(null)}
+                    // Fixed: Removed onReorderSubject prop call as it is not part of SubjectCard's interface
+                  />
                 ))}
               </div>
             </div>
             <div className="space-y-6">
-              <div className="flex items-center gap-3 border-l-4 border-orange-500 pl-4">
-                <h2 className="text-xl font-black heading-kh text-orange-800">✍️ ផ្នែកសំណួរចម្លើយខ្លីៗ</h2>
-                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black">{groupedSubjects.short.length} មុខវិជ្ជា</span>
+              <div className="flex flex-col border-l-4 border-orange-500 pl-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-black heading-kh text-orange-800">✍️ ផ្នែកសំណួរចម្លើយខ្លីៗ</h2>
+                  <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black">{groupedSubjects.short.length} មុខវិជ្ជា</span>
+                </div>
+                <span className="text-[10px] text-gray-400 small-kh italic mt-1">ទាញកាតមុខវិជ្ជាដើម្បីរៀបលំដាប់លំដោយ (Drag to Reorder)</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupedSubjects.short.map((sub, i) => (
-                  <SubjectCard key={`short-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} onReorderSubject={onReorderSubject} />
+                  <SubjectCard 
+                    key={`short-${sub.name}`} 
+                    sub={sub} 
+                    index={i}
+                    isDragging={draggedIdx === i}
+                    onToggleSubject={onToggleSubject} 
+                    onRemoveSubject={onRemoveSubject} 
+                    onDragStart={handleDragStart}
+                    onDragOver={(e, idx) => handleDragOver(idx, 'short', groupedSubjects.short.map(s => s.name))}
+                    onDragEnd={() => setDraggedIdx(null)}
+                    // Fixed: Removed onReorderSubject prop call as it is not part of SubjectCard's interface
+                  />
                 ))}
               </div>
             </div>
           </div>
         )}
       </div>
-      {/* Question list remains same... */}
+      
       <div className="glass-card rounded-[2.5rem] shadow-lg p-8 border border-white/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h3 className="text-lg font-black heading-kh text-maroon">📚 បញ្ជីសំណួរទាំងអស់ ({quizData.length})</h3>

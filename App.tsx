@@ -77,6 +77,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateSubjectOrder = (type: 'mcq' | 'short', newOrderList: string[]) => {
+    const newSubjectOrder = { ...subjectOrder, [type]: newOrderList };
+    handleSyncData(quizData, newSubjectOrder);
+  };
+
   const handleReorderSubject = (type: 'mcq' | 'short', direction: 'up' | 'down', subjectName: string) => {
     const currentOrder = [...(subjectOrder[type] || [])];
     const index = currentOrder.indexOf(subjectName);
@@ -88,7 +93,7 @@ const App: React.FC = () => {
       [currentOrder[index], currentOrder[index + 1]] = [currentOrder[index + 1], currentOrder[index]];
     }
 
-    handleSyncData(quizData, { ...subjectOrder, [type]: currentOrder });
+    handleUpdateSubjectOrder(type, currentOrder);
   };
 
   const handleAddQuestion = (q: Question) => {
@@ -183,6 +188,7 @@ const App: React.FC = () => {
               onToggleSubject={handleToggleSubject} 
               onRemoveSubject={handleRemoveSubject} 
               onReorderSubject={handleReorderSubject}
+              onUpdateSubjectOrder={handleUpdateSubjectOrder}
               onBatchAdd={handleBatchAdd} 
               onLogout={handleLogout} 
             />
