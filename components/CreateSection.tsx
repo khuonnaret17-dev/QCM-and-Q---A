@@ -5,30 +5,37 @@ import { Question } from '../types';
 
 interface CreateSectionProps {
   quizData: Question[];
+  subjectOrder: { mcq: string[], short: string[] };
   onAdd: (q: Question) => void;
   onUpdate: (index: number, q: Question) => void;
   onRemove: (index: number) => void;
   onToggleSubject: (subject: string, type: 'mcq' | 'short', active: boolean) => void;
   onRemoveSubject: (subject: string, type: 'mcq' | 'short') => void;
+  onReorderSubject: (type: 'mcq' | 'short', direction: 'up' | 'down', subjectName: string) => void;
   onBatchAdd: (qs: Question[]) => void;
   onLogout: () => void;
 }
 
-// ជួសជុលបញ្ហា Type Error ដោយការយក SubjectCard ចេញពី CreateSection និងកំណត់ Type ឱ្យត្រឹមត្រូវសម្រាប់ React Component
-// This fixes the 'Property key does not exist' error by making SubjectCard a top-level React.FC
 const SubjectCard: React.FC<{
   sub: { name: string, isActive: boolean, count: number, type: 'mcq' | 'short' };
   onToggleSubject: (subject: string, type: 'mcq' | 'short', active: boolean) => void;
   onRemoveSubject: (subject: string, type: 'mcq' | 'short') => void;
-}> = ({ sub, onToggleSubject, onRemoveSubject }) => (
+  onReorderSubject: (type: 'mcq' | 'short', direction: 'up' | 'down', subjectName: string) => void;
+}> = ({ sub, onToggleSubject, onRemoveSubject, onReorderSubject }) => (
   <div className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${sub.isActive ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-gray-200 grayscale opacity-60'}`}>
     <div>
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-lg font-black heading-kh text-maroon truncate max-w-[150px]">{sub.name}</h3>
-        <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
+        <div className="flex flex-col gap-1 items-end">
+           <span className="text-[9px] font-black bg-gray-50 px-3 py-1 rounded-full text-gray-400">{sub.count} សំណួរ</span>
+           <div className="flex gap-1 mt-2">
+              <button onClick={() => onReorderSubject(sub.type, 'up', sub.name)} className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-maroon hover:text-white rounded-lg transition-all text-xs">↑</button>
+              <button onClick={() => onReorderSubject(sub.type, 'down', sub.name)} className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-maroon hover:text-white rounded-lg transition-all text-xs">↓</button>
+           </div>
+        </div>
       </div>
     </div>
-    <div className="flex gap-2">
+    <div className="flex gap-2 mt-4">
       <button 
         onClick={() => onToggleSubject(sub.name, sub.type, !sub.isActive)}
         className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${sub.isActive ? 'bg-maroon/5 text-maroon hover:bg-maroon hover:text-white' : 'bg-green-500 text-white hover:brightness-110'}`}
@@ -46,7 +53,7 @@ const SubjectCard: React.FC<{
 );
 
 const CreateSection: React.FC<CreateSectionProps> = ({ 
-  quizData, onAdd, onUpdate, onRemove, onToggleSubject, onRemoveSubject, onBatchAdd
+  quizData, subjectOrder, onAdd, onUpdate, onRemove, onToggleSubject, onRemoveSubject, onReorderSubject, onBatchAdd
 }) => {
   const KHMER_PREFIXES = ['ក', 'ខ', 'គ', 'ឃ'];
   const [entryMode, setEntryMode] = useState<'single' | 'bulk' | 'subjects'>('single');
@@ -71,23 +78,30 @@ const CreateSection: React.FC<CreateSectionProps> = ({
   }, [quizData, searchQuery]);
 
   const groupedSubjects = useMemo(() => {
-    const mcqSubsSet = new Set(quizData.filter(q => q.type === 'mcq').map(q => q.subject));
-    const shortSubsSet = new Set(quizData.filter(q => q.type === 'short').map(q => q.subject));
+    const mcqRaw = Array.from(new Set(quizData.filter(q => q.type === 'mcq').map(q => q.subject)));
+    const shortRaw = Array.from(new Set(quizData.filter(q => q.type === 'short').map(q => q.subject)));
 
-    const mcqList = Array.from(mcqSubsSet).map(name => {
+    // Sort based on subjectOrder or append new ones at end
+    const mcqSorted = [...(subjectOrder.mcq || [])].filter(s => mcqRaw.includes(s));
+    mcqRaw.forEach(s => { if(!mcqSorted.includes(s)) mcqSorted.push(s); });
+
+    const shortSorted = [...(subjectOrder.short || [])].filter(s => shortRaw.includes(s));
+    shortRaw.forEach(s => { if(!shortSorted.includes(s)) shortSorted.push(s); });
+
+    const mcqList = mcqSorted.map(name => {
       const related = quizData.filter(q => q.subject === name && q.type === 'mcq');
       const isActive = related.every(q => q.isActive !== false);
       return { name, isActive, count: related.length, type: 'mcq' as const };
     });
 
-    const shortList = Array.from(shortSubsSet).map(name => {
+    const shortList = shortSorted.map(name => {
       const related = quizData.filter(q => q.subject === name && q.type === 'short');
       const isActive = related.every(q => q.isActive !== false);
       return { name, isActive, count: related.length, type: 'short' as const };
     });
 
     return { mcq: mcqList, short: shortList };
-  }, [quizData]);
+  }, [quizData, subjectOrder]);
 
   const handleSubmitSingle = () => {
     if (!subject.trim() || !question.trim()) {
@@ -106,15 +120,11 @@ const CreateSection: React.FC<CreateSectionProps> = ({
     if (editingIndex !== null) onUpdate(editingIndex, newQ);
     else onAdd(newQ);
     
-    setQuestion(''); 
-    setOptions(['', '', '', '']); 
-    setShortAnswer('');
-    setEditingIndex(null);
+    setQuestion(''); setOptions(['', '', '', '']); setShortAnswer(''); setEditingIndex(null);
   };
 
   const handleBulkSubmit = () => {
     if (!subject.trim() || !bulkText.trim()) return alert("សូមបំពេញព័ត៌មាន!");
-    
     const lines = bulkText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const parsed: Question[] = [];
     let cur: Partial<Question> | null = null;
@@ -180,18 +190,15 @@ const CreateSection: React.FC<CreateSectionProps> = ({
                 <button onClick={() => setQType('short')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${qType === 'short' ? 'bg-white text-maroon shadow-sm' : 'text-gray-400'}`}>Q & A</button>
               </div>
             </div>
-
             <div className="grid grid-cols-1 gap-5">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ឈ្មោះមុខវិជ្ជា</label>
                 <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full px-6 py-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-maroon small-kh bg-gray-50/50 text-maroon font-bold" placeholder="ឧទាហរណ៍៖ សេដ្ឋកិច្ច" />
               </div>
-              
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 ml-2">អត្ថបទសំណួរ</label>
                 <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full px-6 py-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-maroon outline-none min-h-[100px] small-kh bg-gray-50/50" placeholder="សរសេរសំណួរ..." />
               </div>
-
               {qType === 'mcq' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {options.map((opt, i) => (
@@ -239,7 +246,6 @@ const CreateSection: React.FC<CreateSectionProps> = ({
 
         {entryMode === 'subjects' && (
           <div className="space-y-12 animate-fadeIn">
-            {/* MCQ Subjects Section */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 border-l-4 border-blue-500 pl-4">
                 <h2 className="text-xl font-black heading-kh text-blue-800">🔘 ផ្នែកសំណួរពហុចម្លើយ</h2>
@@ -247,15 +253,10 @@ const CreateSection: React.FC<CreateSectionProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {groupedSubjects.mcq.map((sub, i) => (
-                  <SubjectCard key={`mcq-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} />
+                  <SubjectCard key={`mcq-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} onReorderSubject={onReorderSubject} />
                 ))}
-                {groupedSubjects.mcq.length === 0 && (
-                  <div className="col-span-full py-10 text-center text-gray-400 italic bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 small-kh">មិនទាន់មានមុខវិជ្ជាក្នុងផ្នែកនេះឡើយ</div>
-                )}
               </div>
             </div>
-
-            {/* Short Answer Subjects Section */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 border-l-4 border-orange-500 pl-4">
                 <h2 className="text-xl font-black heading-kh text-orange-800">✍️ ផ្នែកសំណួរចម្លើយខ្លីៗ</h2>
@@ -263,18 +264,14 @@ const CreateSection: React.FC<CreateSectionProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {groupedSubjects.short.map((sub, i) => (
-                  <SubjectCard key={`short-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} />
+                  <SubjectCard key={`short-${i}`} sub={sub} onToggleSubject={onToggleSubject} onRemoveSubject={onRemoveSubject} onReorderSubject={onReorderSubject} />
                 ))}
-                {groupedSubjects.short.length === 0 && (
-                  <div className="col-span-full py-10 text-center text-gray-400 italic bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 small-kh">មិនទាន់មានមុខវិជ្ជាក្នុងផ្នែកនេះឡើយ</div>
-                )}
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* List Display */}
+      {/* Question list remains same... */}
       <div className="glass-card rounded-[2.5rem] shadow-lg p-8 border border-white/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h3 className="text-lg font-black heading-kh text-maroon">📚 បញ្ជីសំណួរទាំងអស់ ({quizData.length})</h3>
@@ -297,25 +294,12 @@ const CreateSection: React.FC<CreateSectionProps> = ({
                 <p className="text-xs font-bold text-gray-700 truncate small-kh">{item.question}</p>
               </div>
               <div className="flex gap-2">
-                <button 
-                  title={item.isActive === false ? "បើកសំណួរ" : "បិទសំណួរ"}
-                  onClick={() => onUpdate(item.originalIndex, { ...item, isActive: item.isActive === false })}
-                  className={`p-3 rounded-xl transition-colors ${item.isActive === false ? 'bg-green-50 text-green-500 hover:bg-green-100' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
-                >
-                  {item.isActive === false ? '🔓' : '🔒'}
-                </button>
-                <button onClick={() => { 
-                  setQType(item.type); setSubject(item.subject); setQuestion(item.question); 
-                  if (item.type === 'mcq') { setOptions(item.options || []); setCorrect(item.correct || 0); } 
-                  else setShortAnswer(item.answer || '');
-                  setEditingIndex(item.originalIndex); setEntryMode('single'); window.scrollTo({top:0, behavior:'smooth'});
-                }} className="p-3 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-colors">✏️</button>
+                <button onClick={() => onUpdate(item.originalIndex, { ...item, isActive: item.isActive === false })} className={`p-3 rounded-xl transition-colors ${item.isActive === false ? 'bg-green-50 text-green-500 hover:bg-green-100' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>{item.isActive === false ? '🔓' : '🔒'}</button>
+                <button onClick={() => { setQType(item.type); setSubject(item.subject); setQuestion(item.question); if (item.type === 'mcq') { setOptions(item.options || []); setCorrect(item.correct || 0); } else setShortAnswer(item.answer || ''); setEditingIndex(item.originalIndex); setEntryMode('single'); window.scrollTo({top:0, behavior:'smooth'}); }} className="p-3 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-colors">✏️</button>
                 <button onClick={() => { if(confirm("តើអ្នកប្រាកដថាចង់លុបសំណួរនេះ?")) onRemove(item.originalIndex); }} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">🗑️</button>
               </div>
             </div>
-          )) : (
-            <div className="text-center py-10 text-gray-400 small-kh italic">មិនមានទិន្នន័យស្វែងរកឡើយ</div>
-          )}
+          )) : <div className="text-center py-10 text-gray-400 italic">មិនមានទិន្នន័យ</div>}
         </div>
       </div>
     </div>

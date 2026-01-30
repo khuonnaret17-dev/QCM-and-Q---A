@@ -9,9 +9,10 @@ interface QuizGameProps {
   type: 'mcq' | 'short';
   allSubjectQuestions: Question[];
   onExit: () => void;
+  onGoHome: () => void;
 }
 
-const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjectQuestions, onExit }) => {
+const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjectQuestions, onExit, onGoHome }) => {
   const KHMER_PREFIXES = ['ក', 'ខ', 'គ', 'ឃ'];
   const KHMER_DIGITS = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
   
@@ -156,9 +157,10 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
           {/* Footer Navigation */}
           <div className="flex flex-col items-center gap-4 pt-10">
             <button onClick={onExit} className="bg-maroon text-white font-black px-16 py-5 rounded-[2.5rem] shadow-2xl shadow-maroon/30 hover:scale-105 active:scale-95 transition-all heading-kh text-xl">
-              ត្រឡប់ទៅបញ្ជីភាគវិញ
+              ត្រឡប់ទៅជ្រើសរើសភាគវិញ
             </button>
-            <p className="text-gray-400 text-xs small-kh italic">អាន និងទន្ទេញឱ្យបានច្រើនដងដើម្បីចងចាំបានល្អ</p>
+            <button onClick={onGoHome} className="text-maroon font-bold heading-kh hover:underline">ត្រឡប់ទៅទំព័រដើម</button>
+            <p className="text-gray-400 text-xs small-kh italic mt-4">អាន និងទន្ទេញឱ្យបានច្រើនដងដើម្បីចងចាំបានល្អ</p>
           </div>
         </div>
       </div>
@@ -204,12 +206,14 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
     return (
       <div className="glass-card rounded-[3rem] p-12 text-center animate-fadeIn">
         <div className="text-8xl mb-6">🏆</div>
-        <h2 className="text-3xl font-black mb-4 heading-kh text-maroon">លទ្ធផល</h2>
+        <h2 className="text-3xl font-black mb-4 heading-kh text-maroon">លទ្ធផលតេស្ត</h2>
         <div className="text-8xl font-black text-indigo-600 my-8 tabular-nums">{toKhmerNumeral(percentage)}%</div>
         <p className="text-xl mb-12 small-kh text-gray-600">អ្នកឆ្លើយត្រូវ {toKhmerNumeral(state.score)} / {toKhmerNumeral(partQuestions.length)}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto">
-          <button onClick={() => setState(prev => ({ ...prev, isReviewing: true }))} className="w-full bg-white border-2 border-maroon text-maroon font-black py-4 rounded-2xl shadow-md">ពិនិត្យចម្លើយ 👁️</button>
-          <button onClick={onExit} className="w-full bg-maroon text-white font-black py-4 rounded-2xl shadow-xl">ត្រឡប់ទៅវិញ 🏠</button>
+        
+        <div className="flex flex-col gap-4 max-w-sm mx-auto">
+          <button onClick={() => setState(prev => ({ ...prev, isReviewing: true }))} className="w-full bg-white border-2 border-maroon text-maroon font-black py-4 rounded-2xl shadow-md hover:bg-gray-50 transition-all heading-kh">ពិនិត្យចម្លើយ 👁️</button>
+          <button onClick={onExit} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl hover:brightness-110 transition-all heading-kh">ជ្រើសរើសភាគផ្សេងទៀត 🔄</button>
+          <button onClick={onGoHome} className="w-full bg-maroon text-white font-black py-4 rounded-2xl shadow-xl hover:brightness-110 transition-all heading-kh">ត្រឡប់ទៅទំព័រដើម 🏠</button>
         </div>
       </div>
     );
@@ -232,7 +236,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
             {isMuted ? '🔇' : '🔊'}
           </button>
           <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-lg font-black text-xl tabular-nums">ពិន្ទុ៖ {toKhmerNumeral(state.score)}</div>
-          <button onClick={() => { if(confirm("ចាកចេញ?")) onExit(); }} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl">✕</button>
+          <button onClick={() => { if(confirm("តើអ្នកចង់ចាកចេញមែនទេ?")) onExit(); }} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all">✕</button>
         </div>
       </div>
 

@@ -1,19 +1,7 @@
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { Question } from '../types';
-
-/**
- * ⚠️ បញ្ជាក់៖ ដើម្បីបាត់ Error "permission-denied" អ្នកត្រូវ៖
- * ១. ចូលទៅ Firebase Console > Firestore Database > Rules
- * ២. កែទៅជា៖
- *    service cloud.firestore {
- *      match /databases/{database}/documents {
- *        match /{document=**} {
- *          allow read, write: if true; // សម្រាប់តេស្តសាកល្បង
- *        }
- *      }
- *    }
- */
 
 const firebaseConfig = {
   apiKey: "AIzaSyDw5UkwT6ab4rlel-g6KSmaKM9MgjUnIOs",
@@ -29,15 +17,11 @@ let db: any = null;
 
 export const initFirebase = () => {
   try {
-    // បង្ការការតម្លើងម្ដងហើយម្ដងទៀត និងដោះស្រាយបញ្ហា Connectivity Timeout
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    
-    // បង្ខំឱ្យប្រើ Long Polling ដើម្បីជៀសវាងបញ្ហា WebSocket មិនឆ្លើយតបក្នុងរយៈពេល 10 វិនាទី
     db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
-      useFetchStreams: false // បន្ថែមស្ថិរភាពសម្រាប់ Browser មួយចំនួន
+      useFetchStreams: false 
     });
-    
     return db;
   } catch (e) {
     console.error("Firebase initialization failed:", e);
@@ -45,17 +29,18 @@ export const initFirebase = () => {
   }
 };
 
-export const syncQuestionsToFirebase = async (questions: Question[]) => {
+export const syncQuestionsToFirebase = async (questions: Question[], subjectOrder?: { mcq: string[], short: string[] }) => {
   if (!db) throw new Error("Database not initialized");
   const quizRef = doc(db, 'config', 'questions_data');
   await setDoc(quizRef, { 
     questions, 
+    subjectOrder: subjectOrder || { mcq: [], short: [] },
     updatedAt: new Date().toISOString() 
   });
 };
 
 export const listenToQuestions = (
-  onUpdate: (questions: Question[]) => void, 
+  onUpdate: (questions: Question[], subjectOrder?: { mcq: string[], short: string[] }) => void, 
   onError: (error: any) => void
 ) => {
   if (!db) {
@@ -68,13 +53,13 @@ export const listenToQuestions = (
   return onSnapshot(quizRef, 
     (docSnap) => {
       if (docSnap.exists()) {
-        onUpdate(docSnap.data().questions || []);
+        const data = docSnap.data();
+        onUpdate(data.questions || [], data.subjectOrder);
       } else {
-        onUpdate([]);
+        onUpdate([], { mcq: [], short: [] });
       }
     },
     (error) => {
-      // បោះកំហុសទៅ UI ដើម្បីឱ្យដឹងថា Sync មិនដំណើរការ
       onError(error);
     }
   );
