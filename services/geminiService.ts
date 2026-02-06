@@ -1,36 +1,18 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { Question } from "../types";
 
-// Initialize the Gemini API client using the environment variable.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-/**
- * Generates quiz questions based on a subject and type using Gemini.
- * Uses gemini-3-pro-preview for complex Khmer language generation tasks as recommended for complex text tasks.
- */
-export const generateQuizQuestions = async (subject: string, type: 'mcq' | 'short') => {
-  if (!process.env.API_KEY) {
-    console.warn("API_KEY is not configured, skipping AI generation.");
-    return [];
-  }
-
-  const prompt = `You are an expert educator specializing in Cambodian civil service exams. 
-  Generate 10 high-quality quiz questions about the subject "${subject}" in Khmer language.
+// Fix: Implement quiz question generation using the modern Gemini 3 SDK.
+// Upgraded model to 'gemini-3-pro-preview' as generating professional state exam questions in Khmer is a complex reasoning task.
+export const generateQuizQuestions = async (subject: string, count: number = 5): Promise<Question[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  For type "mcq" (Multiple Choice Questions):
-  - Provide exactly 4 options for each question.
-  - Indicate the correct option with a 0-based index (0-3).
-  
-  For type "short" (Short Answer Questions):
-  - Provide a clear question and a concise correct answer text.
-  
-  Return the result as a JSON array of objects following the quiz question schema.`;
-
   try {
-    // Calling generateContent with the gemini-3-pro-preview model as per guidelines for complex text tasks.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: `Generate ${count} professional quiz questions about "${subject}" in Khmer. 
+      Ensure questions are suitable for government state exam preparation.
+      Output must be a JSON array of quiz objects.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -40,44 +22,27 @@ export const generateQuizQuestions = async (subject: string, type: 'mcq' | 'shor
             properties: {
               subject: { type: Type.STRING },
               question: { type: Type.STRING },
-              type: { 
-                type: Type.STRING,
-                description: "The type of question: 'mcq' or 'short'"
-              },
+              type: { type: Type.STRING, enum: ["mcq", "short"] },
               options: { 
                 type: Type.ARRAY, 
                 items: { type: Type.STRING },
-                description: "Required for mcq, exactly 4 strings."
+                description: "Array of exactly 4 choices for MCQ"
               },
-              correct: { 
-                type: Type.NUMBER,
-                description: "Required for mcq, 0-3 index."
-              },
-              answer: { 
-                type: Type.STRING,
-                description: "Required for short, the correct answer text."
-              },
-              isActive: { type: Type.BOOLEAN }
+              correct: { type: Type.INTEGER, description: "Zero-based index of correct option" },
+              answer: { type: Type.STRING, description: "Correct text for short answer questions" }
             },
             required: ["subject", "question", "type"],
-            propertyOrdering: ["subject", "question", "type", "options", "correct", "answer", "isActive"]
+            propertyOrdering: ["subject", "question", "type", "options", "correct", "answer"]
           }
         }
       }
     });
 
-    // Accessing .text property directly as per SDK guidelines (property, not a method).
-    const jsonStr = response.text?.trim() || '';
-    if (!jsonStr) return [];
-    
-    const parsed = JSON.parse(jsonStr);
-    return parsed.map((q: any) => ({
-      ...q,
-      subject: q.subject || subject,
-      isActive: q.isActive ?? true
-    }));
+    // Directly access the .text property of GenerateContentResponse
+    const result = response.text.trim();
+    return JSON.parse(result) as Question[];
   } catch (error) {
-    console.error("Error generating quiz questions via Gemini:", error);
+    console.error("AI Question Generation Failed:", error);
     return [];
   }
 };
