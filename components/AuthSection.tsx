@@ -35,40 +35,81 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, secretCode }) => {
   };
 
   return (
-    <div className="page-transition relative max-w-4xl mx-auto px-4">
+    <div className="page-transition relative max-w-5xl mx-auto px-4">
       {view === 'main' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* User Card */}
-          <div className="card-white-elegant p-8 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center text-5xl mb-6 border border-indigo-100 shadow-inner">👨‍🎓</div>
-            <h2 className="text-2xl font-black heading-kh text-indigo-950 mb-2">សមាជិក</h2>
-            <p className="text-sm small-kh text-indigo-900/50 mb-8">ចូលរៀន និងវាស់ស្ទង់សមត្ថភាព</p>
-            <div className="space-y-3 w-full">
-              <button 
-                onClick={() => setView('user_login')} 
-                className="btn-blue-elegant w-full py-4 rounded-xl font-black heading-kh text-lg"
-              >
-                🔐 ចូលរៀន
-              </button>
-              <div className="grid grid-cols-2 gap-3 mt-6">
-                <a href={ADMIN_CONTACTS.admin1} target="_blank" className="py-4 bg-gray-50 text-indigo-950 rounded-xl font-black heading-kh text-[10px] border border-gray-200 shadow-sm text-center">📱 Naret</a>
-                <a href={ADMIN_CONTACTS.admin2} target="_blank" className="py-4 bg-gray-50 text-indigo-950 rounded-xl font-black heading-kh text-[10px] border border-gray-200 shadow-sm text-center">📱 Master</a>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Member Card - Modern Design */}
+          <div className="group relative bg-white rounded-[2.5rem] p-8 shadow-xl border border-white/50 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
+            {/* Background Decorations */}
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500"></div>
+            <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-50 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-700"></div>
+            <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white via-white to-transparent z-10"></div>
+            
+            <div className="relative flex flex-col items-center text-center z-20 h-full">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 rounded-full group-hover:opacity-40 transition-opacity"></div>
+                <div className="w-24 h-24 bg-gradient-to-br from-white to-blue-50 rounded-[2rem] flex items-center justify-center text-5xl shadow-lg border border-blue-100 transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                  👨‍🎓
+                </div>
+              </div>
+              
+              <h2 className="text-3xl font-black heading-kh text-transparent bg-clip-text bg-gradient-to-r from-indigo-950 to-blue-800 mb-2">សមាជិក</h2>
+              <p className="text-sm text-gray-500 font-medium small-kh mb-8">ចូលរៀន និងពង្រឹងសមត្ថភាព</p>
+              
+              <div className="w-full flex flex-col gap-5 mt-auto">
+                <button 
+                  onClick={() => setView('user_login')} 
+                  className="w-full py-4 rounded-2xl font-black heading-kh text-lg text-white bg-gradient-to-r from-indigo-600 to-blue-600 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                >
+                  🔐 ចូលរៀន
+                </button>
+                
+                {/* Contact Section */}
+                <div className="bg-gradient-to-b from-slate-50 to-white p-5 rounded-2xl border-2 border-dashed border-indigo-200 relative mt-2 group/contact hover:border-indigo-400 transition-colors">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-4 py-1 rounded-full text-[10px] font-black heading-kh shadow-md tracking-wider whitespace-nowrap">
+                     បើកគណនីដើម្បីប្រើប្រាស់
+                  </div>
+                  
+                  <p className="text-sm font-black heading-kh text-indigo-900 mb-4 mt-2">✨ ទំនាក់ទំនងដើម្បីបើកគណនី ✨</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <a href={ADMIN_CONTACTS.admin1} target="_blank" className="py-3 bg-white text-indigo-950 rounded-xl font-black heading-kh text-[11px] border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group/btn">
+                       <span className="text-blue-500 text-lg group-hover/btn:rotate-12 transition-transform">✈️</span> Naret
+                    </a>
+                    <a href={ADMIN_CONTACTS.admin2} target="_blank" className="py-3 bg-white text-indigo-950 rounded-xl font-black heading-kh text-[11px] border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group/btn">
+                       <span className="text-blue-500 text-lg group-hover/btn:rotate-12 transition-transform">✈️</span> Master
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Admin Card */}
+          {/* Admin Card - Modern Design */}
           <div 
             onClick={() => setView('admin_login')} 
-            className="card-white-elegant p-8 flex flex-col items-center text-center border-2 border-transparent hover:border-red-100 transition-all cursor-pointer"
+            className="group relative bg-white rounded-[2.5rem] p-8 shadow-xl border border-white/50 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer overflow-hidden"
           >
-            <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center text-5xl mb-6 border border-red-100 shadow-inner">⚙️</div>
-            <h2 className="text-2xl font-black heading-kh text-maroon-bold mb-2">ADMIN</h2>
-            <p className="text-sm small-kh text-maroon/50 mb-8">គ្រប់គ្រងសំណួរ និងទិន្នន័យ</p>
-            <div className="mt-auto w-full">
-               <button className="btn-red-elegant w-full py-4 rounded-xl font-black heading-kh text-lg">
-                គ្រប់គ្រង 🚀
-              </button>
+            {/* Background Decorations */}
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-red-500 via-rose-500 to-pink-600"></div>
+            <div className="absolute -top-20 -right-20 w-60 h-60 bg-red-50 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-700"></div>
+            
+            <div className="relative flex flex-col items-center text-center z-20 h-full">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-red-400 blur-2xl opacity-20 rounded-full group-hover:opacity-40 transition-opacity"></div>
+                <div className="w-24 h-24 bg-gradient-to-br from-white to-red-50 rounded-[2rem] flex items-center justify-center text-5xl shadow-lg border border-red-100 transform group-hover:rotate-180 transition-all duration-1000 ease-in-out">
+                  ⚙️
+                </div>
+              </div>
+
+              <h2 className="text-3xl font-black heading-kh text-transparent bg-clip-text bg-gradient-to-r from-red-900 to-rose-700 mb-2">ADMIN</h2>
+              <p className="text-sm text-gray-500 font-medium small-kh mb-8">គ្រប់គ្រងប្រព័ន្ធ</p>
+              
+              <div className="mt-auto w-full">
+                 <button className="w-full py-4 rounded-2xl font-black heading-kh text-lg text-white bg-gradient-to-r from-red-700 to-rose-600 shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 group-hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+                  គ្រប់គ្រង 🚀
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -78,14 +119,19 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, secretCode }) => {
         <div className="card-white-elegant p-8 md:p-12 text-center page-transition relative max-w-md mx-auto">
           <button 
             onClick={() => { setView('main'); setUserInput(''); setPassInput(''); }}
-            className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center bg-gray-100 rounded-xl hover:bg-maroon hover:text-white transition-all shadow-sm font-black text-xl"
+            className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center bg-gray-100 rounded-xl hover:bg-maroon hover:text-white transition-all shadow-sm font-black text-xl z-20"
           >
             ←
           </button>
           
-          <div className="w-24 h-24 bg-gray-50 rounded-[1.5rem] flex items-center justify-center text-5xl mx-auto mb-6 shadow-inner border border-gray-200">
-            {view === 'user_login' ? '👤' : '🔒'}
+          <div className="relative mb-8 mt-2">
+            <div className={`w-28 h-28 mx-auto rounded-[2rem] flex items-center justify-center text-5xl shadow-inner border border-gray-100 ${view === 'user_login' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+              {view === 'user_login' ? '👤' : '🔒'}
+            </div>
+            {/* Animated Ring */}
+            <div className={`absolute inset-0 m-auto w-28 h-28 rounded-[2rem] border-2 ${view === 'user_login' ? 'border-blue-500' : 'border-red-500'} animate-ping opacity-20`}></div>
           </div>
+
           <h2 className={`text-2xl font-black heading-kh mb-2 ${view === 'user_login' ? 'text-indigo-950' : 'text-maroon-bold'}`}>
             {view === 'user_login' ? 'ចូលជាសមាជិក' : 'ចូលជា ADMIN'}
           </h2>
@@ -93,19 +139,19 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, secretCode }) => {
 
           <div className="space-y-6 mb-10 text-left">
             {view === 'user_login' && (
-              <div>
-                <label className="text-[10px] font-black uppercase text-indigo-950 ml-4 mb-2 block tracking-widest small-kh">Username</label>
+              <div className="group">
+                <label className="text-[10px] font-black uppercase text-indigo-950 ml-4 mb-2 block tracking-widest small-kh group-focus-within:text-blue-600 transition-colors">Username</label>
                 <input 
                   type="text" 
                   value={userInput} 
                   onChange={(e) => setUserInput(e.target.value)} 
-                  className="input-elegant w-full px-5 py-3.5" 
+                  className="input-elegant w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-blue-500 focus:bg-blue-50/20 transition-all font-bold text-lg" 
                   placeholder="វាយឈ្មោះ..." 
                 />
               </div>
             )}
-            <div>
-              <label className={`text-[10px] font-black uppercase ml-4 mb-2 block tracking-widest small-kh ${view === 'admin_login' ? 'text-maroon-bold' : 'text-indigo-950'}`}>
+            <div className="group">
+              <label className={`text-[10px] font-black uppercase ml-4 mb-2 block tracking-widest small-kh transition-colors ${view === 'admin_login' ? 'text-maroon-bold group-focus-within:text-red-600' : 'text-indigo-950 group-focus-within:text-blue-600'}`}>
                 {view === 'user_login' ? 'Password (៦ខ្ទង់)' : 'Admin Password'}
               </label>
               <input 
@@ -113,7 +159,7 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, secretCode }) => {
                 inputMode={view === 'user_login' ? 'numeric' : 'text'}
                 value={passInput} 
                 onChange={(e) => setPassInput(view === 'user_login' ? e.target.value.replace(/\D/g, '').slice(0, 6) : e.target.value)} 
-                className={`input-elegant w-full px-5 py-3.5 ${view === 'admin_login' ? 'text-center tracking-widest' : ''}`} 
+                className={`input-elegant w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:bg-opacity-20 transition-all font-bold text-lg ${view === 'admin_login' ? 'text-center tracking-[0.5em] focus:border-red-500 focus:bg-red-50' : 'focus:border-blue-500 focus:bg-blue-50'}`} 
                 placeholder={view === 'user_login' ? "••••••" : "••••"}
                 onKeyDown={(e) => e.key === 'Enter' && (view === 'user_login' ? handleUserVerify() : handleAdminVerify())} 
               />
@@ -122,7 +168,7 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, secretCode }) => {
 
           <button 
             onClick={view === 'user_login' ? handleUserVerify : handleAdminVerify} 
-            className={`w-full py-4 rounded-xl font-black heading-kh text-lg ${view === 'user_login' ? 'btn-blue-elegant' : 'btn-red-elegant'}`}
+            className={`w-full py-4 rounded-2xl font-black heading-kh text-lg text-white shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ${view === 'user_login' ? 'bg-gradient-to-r from-blue-600 to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-red-600 to-rose-700 shadow-red-500/30'}`}
           >
             យល់ព្រម 🚀
           </button>
