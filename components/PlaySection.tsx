@@ -11,13 +11,13 @@ interface PlaySectionProps {
   username: string;
   quizData: Question[];
   isAdmin?: boolean;
-  onStartQuiz: (subject: string, partIndex: number, type: 'mcq' | 'short', customQuestions?: Question[], isMixed?: boolean) => void;
+  onStartQuiz: (subject: string, partIndex: number, type: 'mcq' | 'short' | 'explanation', customQuestions?: Question[], isMixed?: boolean) => void;
 }
 
 const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, onStartQuiz }) => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedSubjectForQuiz, setSelectedSubjectForQuiz] = useState<string | null>(null);
-  const [activeType, setActiveType] = useState<'mcq' | 'short'>('mcq');
+  const [activeType, setActiveType] = useState<'mcq' | 'short' | 'explanation'>('mcq');
   const [searchQuery, setSearchQuery] = useState('');
   const [playMode, setPlayMode] = useState<'by-subject' | 'mixed'>('by-subject');
   
@@ -25,9 +25,12 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
   const [mixedCount, setMixedCount] = useState<number>(10);
   const [selectedMixedSubjects, setSelectedMixedSubjects] = useState<string[]>([]);
 
+  // Dictionary Mode State: Track which word is currently expanded
+  const [expandedWord, setExpandedWord] = useState<string | null>(null);
+
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
-  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [isSendingFeedback] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -39,12 +42,12 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
 
   const activeQuestions = useMemo(() => quizData.filter((q: Question) => q.isActive !== false), [quizData]);
 
-  // List of unique subjects for current activeType
+  // List of unique subjects for current activeType (MCQ/Short only)
   const availableSubjectsForMixed = useMemo(() => {
     return Array.from(new Set(activeQuestions.filter(q => q.type === activeType).map(q => q.subject))) as string[];
   }, [activeQuestions, activeType]);
 
-  // Initialize selectedMixedSubjects with all subjects when availableSubjects change or mode changes to mixed
+  // Initialize selectedMixedSubjects
   useEffect(() => {
     if (playMode === 'mixed' && selectedMixedSubjects.length === 0) {
       setSelectedMixedSubjects(availableSubjectsForMixed);
@@ -53,19 +56,34 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
 
   const filteredSubjects: string[] = useMemo(() => {
     let list = Array.from(new Set(activeQuestions.filter(q => q.type === activeType).map((item: Question) => item.subject))) as string[];
-    // Original search by subject logic (not used if we search by question)
     return list;
   }, [activeQuestions, activeType]);
 
-  // New logic: Search questions from the whole app
+  // Search logic for MCQ/Short
   const searchedQuestions = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim() || activeType === 'explanation') return [];
     return activeQuestions.filter(q => 
       q.type === activeType && 
       (q.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
        q.subject.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [activeQuestions, searchQuery, activeType]);
+
+  // Special Logic for Explanation (Dictionary Mode) - Sorted Alphabetically
+  const dictionaryList = useMemo(() => {
+    if (activeType !== 'explanation') return [];
+    
+    let list = activeQuestions.filter(q => q.type === 'explanation');
+    
+    // Sort by Khmer Alphabet
+    list.sort((a, b) => a.question.localeCompare(b.question, 'km'));
+
+    if (searchQuery.trim()) {
+      list = list.filter(q => q.question.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    
+    return list;
+  }, [activeQuestions, activeType, searchQuery]);
 
   const toggleMixedSubject = (sub: string) => {
     setSelectedMixedSubjects(prev => 
@@ -107,9 +125,8 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
 
   const handleSendFeedback = async () => {
     if (!feedbackText.trim()) return;
-    setIsSendingFeedback(true);
+    // Note: isSendingFeedback is not used for loading state in this version, relying on async await
     await sendFeedback(username || 'Anonymous', feedbackText);
-    setIsSendingFeedback(false);
     setFeedbackText('');
     setShowFeedbackModal(false);
     alert("អរគុណ! មតិរបស់អ្នកត្រូវបានផ្ញើ។");
@@ -124,12 +141,106 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
 
     if (filteredQuestions.length === 0) return alert("មិនមានសំណួរសម្រាប់មុខវិជ្ជាដែលបានជ្រើសរើសឡើយ!");
     
-    // Shuffle and pick
     const shuffled = [...filteredQuestions].sort(() => Math.random() - 0.5);
     const selectedQuestions = shuffled.slice(0, mixedCount);
     
     onStartQuiz("វិញ្ញាសាចម្រុះ", 0, activeType, selectedQuestions, true);
   };
+
+  // ----------------------------------------------------------------------
+  // RENDER: DICTIONARY MODE (Explanation) - Accordion Style
+  // ----------------------------------------------------------------------
+  if (activeType === 'explanation') {
+    return (
+      <div className="page-transition space-y-8 pb-24 px-2">
+        {/* Type Toggles */}
+        <div className="flex justify-center flex-wrap gap-2 mb-4">
+          <button onClick={() => { setActiveType('mcq'); setSearchQuery(''); }} className="px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 bg-white text-gray-400 border-gray-200">📑 QCM</button>
+          <button onClick={() => { setActiveType('short'); setSearchQuery(''); }} className="px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 bg-white text-gray-400 border-gray-200">🖊️ Q & A</button>
+          <button onClick={() => { setActiveType('explanation'); setSearchQuery(''); }} className="px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 bg-teal-600 text-white border-teal-800 shadow-lg">📖 ពន្យល់ពាក្យ</button>
+        </div>
+
+        {/* Dictionary Header & Search */}
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-black heading-kh text-white mb-2">ពន្យល់ពាក្យ</h2>
+            <p className="text-white/60 text-xs small-kh">ស្វែងរកអត្ថន័យ និងការពន្យល់ពាក្យតាមលំដាប់អក្សរ</p>
+          </div>
+
+          <div className="relative">
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ស្វែងរកពាក្យ..." 
+              className="w-full pl-14 pr-6 py-4 bg-white border-2 border-teal-600/30 rounded-2xl outline-none shadow-xl heading-kh text-teal-800 text-lg font-black transition-all focus:ring-4 focus:ring-teal-500/20"
+            />
+            <div className="absolute left-6 top-4 text-teal-600/40 text-xl">🔍</div>
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-4 text-gray-400 hover:text-red-500 font-bold"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Word List - Accordion Style */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-2xl border border-white/20 min-h-[400px]">
+             {dictionaryList.length > 0 ? (
+               <div className="grid grid-cols-1 gap-3">
+                 {dictionaryList.map((item, idx) => {
+                   const isExpanded = expandedWord === item.question;
+                   return (
+                     <div key={idx} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-teal-50 border-teal-200 shadow-md' : 'bg-gray-50 border-gray-100 hover:border-teal-200'}`}>
+                       <button 
+                         onClick={() => setExpandedWord(isExpanded ? null : item.question)}
+                         className="w-full flex items-center justify-between p-4 text-left group outline-none"
+                       >
+                         <div className="flex items-center gap-4">
+                           <span className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black text-sm transition-colors shrink-0 ${isExpanded ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-teal-700 border-gray-200 group-hover:scale-110 transition-transform'}`}>
+                             {item.question.charAt(0)}
+                           </span>
+                           <span className={`text-lg font-black heading-kh ${isExpanded ? 'text-teal-900' : 'text-indigo-950 group-hover:text-teal-800'}`}>{item.question}</span>
+                         </div>
+                         <span className={`text-xl transition-transform duration-300 w-8 h-8 flex items-center justify-center rounded-full ${isExpanded ? 'rotate-180 text-teal-600 bg-teal-100' : 'text-gray-300'}`}>▼</span>
+                       </button>
+                       
+                       {/* Expanded Content */}
+                       {isExpanded && (
+                         <div className="px-4 pb-6 pl-4 md:pl-[4.5rem] animate-fadeIn">
+                            <div className="w-full h-[1px] bg-teal-200/50 mb-4"></div>
+                            <p className="text-base leading-loose text-indigo-950 font-medium whitespace-pre-wrap small-kh text-justify bg-white/50 p-4 rounded-xl border border-teal-100/50">
+                              {item.answer}
+                            </p>
+                            <div className="mt-4 flex justify-end">
+                              <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded-lg text-[9px] font-bold uppercase tracking-widest">{item.subject}</span>
+                            </div>
+                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
+               </div>
+             ) : (
+               <div className="flex flex-col items-center justify-center h-64 opacity-50">
+                 <div className="text-6xl mb-4">📚</div>
+                 <p className="heading-kh">មិនមានពាក្យដែលអ្នកកំពុងស្វែងរកទេ</p>
+               </div>
+             )}
+          </div>
+          <p className="text-center text-white/40 text-[10px] mt-4 font-black uppercase tracking-widest">សរុបមាន {toKhmerNumeral(dictionaryList.length)} ពាក្យ</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------------
+  // RENDER: MCQ / SHORT ANSWER (Existing Logic)
+  // ----------------------------------------------------------------------
 
   if (selectedSubjectForQuiz) {
     const subjectQuestions = activeQuestions.filter(q => q.subject === selectedSubjectForQuiz && q.type === activeType);
@@ -163,7 +274,9 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
               >
                 <div className="text-left">
                   <h3 className="heading-kh text-indigo-950 text-xl font-black mb-1">ភាគ {toKhmerNumeral(p + 1)}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">សំណួរទី {toKhmerNumeral(startRange)} ដល់ {toKhmerNumeral(endRange)}</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                    សំណួរទី {toKhmerNumeral(startRange)} ដល់ {toKhmerNumeral(endRange)}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-xl group-hover:bg-red-600 group-hover:text-white transition-all shadow-inner">
                   🚀
@@ -284,8 +397,8 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
             </div>
 
             <div className="mt-20 pt-10 border-t border-indigo-900/10 flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">ប្រព័ន្ធរៀបចំវិញ្ញាសាដោយស្វ័យប្រវត្តិតាម Web App</p>
-              <p className="text-[10px] font-black text-red-600 uppercase tracking-widest font-bold">តេឡេក្រាម៖ t.me/web_qcm_q_and_a</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Master Quiz KH</p>
+              <p className="text-[10px] font-black text-red-600 uppercase tracking-widest font-bold">ជូនពរសំណាងល្អ!</p>
             </div>
           </div>
         </div>
@@ -307,7 +420,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ស្វែងរកសំណួរដែលអ្នកចង់រៀន..." 
+              placeholder="ស្វែងរក..." 
               className="w-full pl-14 pr-6 py-4 bg-white border-2 border-indigo-900 rounded-2xl outline-none shadow-xl heading-kh text-blue-600 text-lg font-black transition-all focus:ring-4 focus:ring-indigo-900/10"
             />
             <div className="absolute left-6 top-4 text-indigo-900/40">
@@ -318,9 +431,10 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
       </div>
 
       <div className="space-y-8">
-        <div className="flex justify-center gap-3">
-          <button onClick={() => setActiveType('mcq')} className={`px-10 py-3.5 rounded-xl font-black heading-kh text-sm transition-all border-b-4 ${activeType === 'mcq' ? 'bg-red-600 text-white border-red-800 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}>📑 QCM</button>
-          <button onClick={() => setActiveType('short')} className={`px-10 py-3.5 rounded-xl font-black heading-kh text-sm transition-all border-b-4 ${activeType === 'short' ? 'bg-red-600 text-white border-red-800 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}>🖊️ Q & A</button>
+        <div className="flex justify-center flex-wrap gap-2">
+          <button onClick={() => { setActiveType('mcq'); setSearchQuery(''); }} className={`px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 ${activeType === 'mcq' ? 'bg-red-600 text-white border-red-800 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}>📑 QCM</button>
+          <button onClick={() => { setActiveType('short'); setSearchQuery(''); }} className={`px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 ${activeType === 'short' ? 'bg-red-600 text-white border-red-800 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}>🖊️ Q & A</button>
+          <button onClick={() => { setActiveType('explanation'); setSearchQuery(''); }} className={`px-8 py-3.5 rounded-xl font-black heading-kh text-xs transition-all border-b-4 bg-white text-gray-400 border-gray-200`}>📖 ពន្យល់ពាក្យ</button>
         </div>
 
         {playMode === 'by-subject' ? (
@@ -328,7 +442,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
             {searchQuery.trim() ? (
               <div className="space-y-4 max-w-2xl mx-auto">
                 <div className="flex justify-between items-center px-4">
-                  <h4 className="heading-kh text-white/70 text-xs font-black uppercase">លទ្ធផលស្វែងរកសំណួរ ({toKhmerNumeral(searchedQuestions.length)})</h4>
+                  <h4 className="heading-kh text-white/70 text-xs font-black uppercase">លទ្ធផលស្វែងរក ({toKhmerNumeral(searchedQuestions.length)})</h4>
                   <button onClick={() => setSearchQuery('')} className="text-xs font-black text-red-500">✖ បិទ</button>
                 </div>
                 {searchedQuestions.map((q, idx) => (
@@ -350,7 +464,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
                 {searchedQuestions.length === 0 && (
                   <div className="py-20 text-center">
                     <div className="text-6xl mb-4 opacity-10">🔍</div>
-                    <p className="heading-kh text-white/50">មិនមានសំណួរត្រូវនឹងការស្វែងរកឡើយ</p>
+                    <p className="heading-kh text-white/50">មិនមានទិន្នន័យត្រូវនឹងការស្វែងរកឡើយ</p>
                   </div>
                 )}
               </div>
@@ -362,7 +476,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
                     <div key={i} className="card-white-elegant p-6 flex flex-col group relative transition-all hover:border-red-600">
                       <div onClick={() => setSelectedSubjectForQuiz(sub)} className="cursor-pointer">
                         <div className="flex items-center gap-4 mb-4">
-                          <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-3xl border border-gray-100 group-hover:bg-red-50 transition-colors">
+                          <div className={`w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-3xl border border-gray-100 group-hover:bg-red-50 transition-colors`}>
                              {activeType === 'mcq' ? '📑' : '🖊️'}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -388,7 +502,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
              <div className="card-white-elegant p-8 text-center border-t-8 border-red-600">
                 <div className="text-6xl mb-6">⚡</div>
                 <h2 className="text-2xl font-black heading-kh text-indigo-950 mb-2">ធ្វើតេស្តចម្រុះ</h2>
-                <p className="small-kh text-gray-500 text-sm mb-8">កម្មវិធីនឹងជ្រើសរើសសំណួរដោយចៃដន្យពីមុខវិជ្ជាដែលអ្នកបានជ្រើសរើស</p>
+                <p className="small-kh text-gray-500 text-sm mb-8">កម្មវិធីនឹងជ្រើសរើសដោយចៃដន្យពីមុខវិជ្ជាដែលអ្នកបានជ្រើសរើស</p>
                 
                 {/* Subject Multi-Selection */}
                 <div className="mb-8 text-left space-y-4">
@@ -438,7 +552,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
 
                 {/* Question Count Selector */}
                 <div className="space-y-4 mb-10">
-                   <p className="text-[10px] font-black text-indigo-950 uppercase tracking-widest text-left ml-2">ជ្រើសរើសចំនួនសំណួរ</p>
+                   <p className="text-[10px] font-black text-indigo-950 uppercase tracking-widest text-left ml-2">ជ្រើសរើសចំនួន</p>
                    <div className="grid grid-cols-5 gap-2">
                       {[10, 20, 30, 50, 100].map(count => (
                         <button 
@@ -456,7 +570,7 @@ const PlaySection: React.FC<PlaySectionProps> = ({ username, quizData, isAdmin, 
                   onClick={handleStartMixedQuiz}
                   className="btn-red-elegant w-full py-5 text-xl heading-kh shadow-xl hover:brightness-110 active:scale-95 transition-all"
                 >
-                  ចាប់ផ្តើមតេស្តចម្រុះ 🚀
+                  ចាប់ផ្តើម 🚀
                 </button>
                 
                 <p className="mt-6 text-[9px] font-bold text-gray-300 uppercase tracking-widest italic">

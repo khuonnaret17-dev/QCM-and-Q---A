@@ -1,3 +1,4 @@
+
 // Fix: Using @firebase/app and @firebase/firestore instead of the top-level firebase/app
 // and firebase/firestore to resolve module resolution errors in certain build environments
 // where the modular SDK's named exports are not correctly identified.
@@ -62,7 +63,12 @@ export const initFirebase = (): Firestore => {
 const prepareDataForFirestore = (questions: Question[]): any[] => {
   if (!Array.isArray(questions)) return [];
   return questions.map(q => {
-    const type = q.type === 'short' ? 'short' : 'mcq';
+    // FIX: Correctly determine the type. 
+    // Previously, anything not 'short' defaulted to 'mcq', causing 'explanation' to be lost.
+    let type = 'mcq';
+    if (q.type === 'short') type = 'short';
+    if (q.type === 'explanation') type = 'explanation';
+
     const base = {
       subject: String(q.subject || ''),
       question: String(q.question || ''),
@@ -77,6 +83,7 @@ const prepareDataForFirestore = (questions: Question[]): any[] => {
         correct: typeof q.correct === 'number' ? q.correct : 0,
       };
     } else {
+      // Both 'short' and 'explanation' use the 'answer' field
       return {
         ...base,
         answer: String(q.answer || ''),

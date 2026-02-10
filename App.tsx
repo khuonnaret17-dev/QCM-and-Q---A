@@ -1,7 +1,8 @@
+
 import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Question, AppMode, SelectedQuizInfo, UserRole, Feedback } from './types';
-import { SECRET_CODE } from './constants';
+import { SECRET_CODE, INITIAL_QUESTIONS } from './constants';
 import Header from './components/Header';
 import AuthSection from './components/AuthSection';
 import CreateSection from './components/CreateSection';
@@ -10,7 +11,7 @@ import QuizGame from './components/QuizGame';
 import { initFirebase, syncQuestionsToFirebase, listenToQuestions, listenToFeedback, removeFeedback } from './services/firebaseService';
 
 const App: React.FC = () => {
-  const [quizData, setQuizData] = useState<Question[]>([]);
+  const [quizData, setQuizData] = useState<Question[]>(INITIAL_QUESTIONS);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [mode, setMode] = useState<AppMode>('play');
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -31,7 +32,11 @@ const App: React.FC = () => {
     if (!Array.isArray(data)) return [];
     
     return data.filter(q => q && typeof q === 'object').map(q => {
-      const type = q.type === 'short' ? 'short' : 'mcq';
+      // Determine type safely
+      let type: 'mcq' | 'short' | 'explanation' = 'mcq';
+      if (q.type === 'short') type = 'short';
+      if (q.type === 'explanation') type = 'explanation';
+
       const cleanObj: Question = {
         subject: String(q.subject || 'មិនមានមុខវិជ្ជា'),
         question: String(q.question || ''),
@@ -95,9 +100,16 @@ const App: React.FC = () => {
     }
 
     const unsubscribeQuestions = listenToQuestions((remoteData) => {
-      const cleaned = sanitizeQuestions(remoteData);
-      setQuizData(cleaned);
-      saveToLocal(cleaned);
+      // If remote data is empty, we don't want to wipe out the initial local questions
+      // unless we are sure it's a sync. For this demo, if remote is empty, we respect local/initial.
+      if (remoteData.length > 0) {
+        const cleaned = sanitizeQuestions(remoteData);
+        setQuizData(cleaned);
+        saveToLocal(cleaned);
+      } else if (!saved) {
+         // If no remote and no local saved, ensure we keep using initial
+         setQuizData(INITIAL_QUESTIONS);
+      }
       setIsCloudConnected(true);
       setIsInitialized(true);
     }, (error) => {
@@ -135,7 +147,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleReorderSubject = (subject: string, type: 'mcq' | 'short', direction: 'up' | 'down') => {
+  const handleReorderSubject = (subject: string, type: 'mcq' | 'short' | 'explanation', direction: 'up' | 'down') => {
     const subjects = Array.from(new Set(quizData.filter(q => q.type === type).map(q => q.subject)));
     const index = subjects.indexOf(subject);
     if (index === -1) return;

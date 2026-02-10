@@ -6,7 +6,7 @@ import { Question, QuizState } from '../types';
 interface QuizGameProps {
   subject: string;
   partIndex: number;
-  type: 'mcq' | 'short';
+  type: 'mcq' | 'short' | 'explanation';
   allSubjectQuestions: Question[];
   onExit: () => void;
   onStartNextPart?: (newPartIndex: number) => void;
@@ -128,7 +128,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
                 ) : (
                   <div className="pl-12 space-y-2">
                     <div className="p-4 bg-emerald-50 border border-emerald-500 rounded-xl">
-                      <p className="text-[10px] font-black text-emerald-600 uppercase mb-1">ចម្លើយត្រឹមត្រូវ៖</p>
+                      <p className="text-[10px] font-black text-emerald-600 uppercase mb-1">{type === 'explanation' ? 'អត្ថន័យ៖' : 'ចម្លើយត្រឹមត្រូវ៖'}</p>
                       <p className="text-emerald-950 text-sm whitespace-pre-wrap">{q.answer}</p>
                     </div>
                   </div>
@@ -153,17 +153,18 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
         <div className="card-white-elegant p-10 text-center border-t-8 border-indigo-900 overflow-hidden relative shadow-2xl">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-900 via-blue-500 to-indigo-900"></div>
           <div className="text-7xl mb-6">🏆</div>
-          <h2 className="text-2xl font-black mb-2 heading-kh text-indigo-950">បញ្ចប់ការធ្វើតេស្ត</h2>
-          <div className="text-7xl font-black text-indigo-900 my-8 drop-shadow-sm">{toKhmerNumeral(percentage)}%</div>
+          <h2 className="text-2xl font-black mb-2 heading-kh text-indigo-950">បញ្ចប់ការ{type === 'explanation' ? 'រៀន' : 'ធ្វើតេស្ត'}</h2>
           
-          <div className="flex justify-center gap-8 mb-10">
+          {type !== 'explanation' && <div className="text-7xl font-black text-indigo-900 my-8 drop-shadow-sm">{toKhmerNumeral(percentage)}%</div>}
+          
+          <div className="flex justify-center gap-8 mb-10 mt-8">
             <div className="text-center">
-              <p className="text-[10px] uppercase font-black text-gray-400 mb-1">ត្រឹមត្រូវ</p>
+              <p className="text-[10px] uppercase font-black text-gray-400 mb-1">{type === 'explanation' ? 'បានរៀន' : 'ត្រឹមត្រូវ'}</p>
               <p className="text-2xl font-black text-emerald-600">{toKhmerNumeral(state.score)}</p>
             </div>
             <div className="h-10 w-[1px] bg-gray-100"></div>
             <div className="text-center">
-              <p className="text-[10px] uppercase font-black text-gray-400 mb-1">សំណួរសរុប</p>
+              <p className="text-[10px] uppercase font-black text-gray-400 mb-1">សរុប</p>
               <p className="text-2xl font-black text-indigo-950">{toKhmerNumeral(partQuestions.length)}</p>
             </div>
           </div>
@@ -173,7 +174,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
               onClick={() => setState(prev => ({ ...prev, isReviewing: true }))}
               className="w-full py-4 bg-emerald-50 text-emerald-700 rounded-2xl border-2 border-emerald-100 font-black heading-kh shadow-sm hover:bg-emerald-100 transition-all"
             >
-              👁️ ពិនិត្យចម្លើយឡើងវិញ
+              👁️ ពិនិត្យឡើងវិញ
             </button>
             
             {hasNextPart && (
@@ -291,7 +292,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
                 className="w-full py-10 bg-indigo-50 border-4 border-dashed border-indigo-200 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:bg-indigo-100 hover:border-indigo-300 transition-all"
               >
                 <div className="text-5xl animate-bounce">🤔</div>
-                <span className="heading-kh text-indigo-900 font-black text-xl">ចុចដើម្បីបង្ហាញចម្លើយ</span>
+                <span className="heading-kh text-indigo-900 font-black text-xl">{type === 'explanation' ? 'ចុចដើម្បីបង្ហាញអត្ថន័យ' : 'ចុចដើម្បីបង្ហាញចម្លើយ'}</span>
               </button>
             ) : (
               <div className="p-8 md:p-10 bg-emerald-50 border-2 border-emerald-500 rounded-[2.5rem] animate-fadeIn shadow-lg relative overflow-hidden">
@@ -299,7 +300,9 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
                   ✅
                 </div>
                 <div className="flex items-center gap-3 mb-6">
-                  <span className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase small-kh shadow-md">ចម្លើយត្រឹមត្រូវ</span>
+                  <span className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase small-kh shadow-md">
+                    {type === 'explanation' ? 'អត្ថន័យ' : 'ចម្លើយត្រឹមត្រូវ'}
+                  </span>
                 </div>
                 <p className="small-kh text-emerald-950 text-xl md:text-2xl font-bold leading-relaxed whitespace-pre-wrap">
                   {currentQ.answer}
@@ -316,7 +319,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
             onClick={handleNext} 
             className="w-full btn-blue-elegant py-5 text-xl heading-kh uppercase tracking-wider shadow-[0_10px_30px_rgba(30,27,75,0.3)] hover:brightness-110 active:scale-[0.98] transition-all"
           >
-            {state.currentQuestionIndex + 1 === partQuestions.length ? "បញ្ចប់ និងមើលលទ្ធផល 🏁" : "សំណួរបន្ទាប់ ✨"}
+            {state.currentQuestionIndex + 1 === partQuestions.length ? "បញ្ចប់ 🏁" : `${type === 'explanation' ? 'ពាក្យ' : 'សំណួរ'}បន្ទាប់ ✨`}
           </button>
         </div>
       )}
