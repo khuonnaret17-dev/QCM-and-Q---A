@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Question, QuizState } from '../types';
@@ -10,6 +9,16 @@ interface QuizGameProps {
   allSubjectQuestions: Question[];
   onExit: () => void;
   onStartNextPart?: (newPartIndex: number) => void;
+}
+
+// Fisher-Yates shuffle algorithm for unbiased randomization
+function shuffleArray<T>(array: T[]): T[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
 }
 
 const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjectQuestions, onExit, onStartNextPart }) => {
@@ -30,16 +39,31 @@ const QuizGame: React.FC<QuizGameProps> = ({ subject, partIndex, type, allSubjec
   // Use a ref to store shuffled questions for the session to avoid re-shuffling during review
   const partQuestions = useMemo(() => {
     const start = partIndex * 10;
-    const subset = allSubjectQuestions.slice(start, start + 10);
+    const subset: Question[] = allSubjectQuestions.slice(start, start + 10);
+    
+    // Randomize the order of questions within this part using Fisher-Yates
+    const shuffledQuestions = shuffleArray<Question>(subset);
+
     if (type === 'mcq') {
-      return subset.map(q => {
+      return shuffledQuestions.map((q: Question) => {
         if (!q.options) return q;
-        const opts = q.options.map((opt, idx) => ({ text: opt, isCorrect: idx === q.correct }));
-        const shuffled = [...opts].sort(() => Math.random() - 0.5);
-        return { ...q, options: shuffled.map(o => o.text), correct: shuffled.findIndex(o => o.isCorrect) };
+        
+        const opts = q.options.map((opt, idx) => ({ 
+          text: opt, 
+          isCorrect: idx === q.correct 
+        }));
+        
+        // Randomize options using Fisher-Yates
+        const shuffledOpts = shuffleArray(opts);
+        
+        return { 
+          ...q, 
+          options: shuffledOpts.map(o => o.text), 
+          correct: shuffledOpts.findIndex(o => o.isCorrect) 
+        };
       });
     }
-    return subset;
+    return shuffledQuestions;
   }, [allSubjectQuestions, partIndex, type]);
 
   const [state, setState] = useState<QuizState>({

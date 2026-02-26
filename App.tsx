@@ -1,25 +1,32 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Question, AppMode, SelectedQuizInfo, UserRole, Feedback } from './types';
+import { Question, AppMode, SelectedQuizInfo, UserRole, Feedback, AppNotification, LoginRecord, PresenceRecord } from './types';
 import { SECRET_CODE, INITIAL_QUESTIONS } from './constants';
 import Header from './components/Header';
 import AuthSection from './components/AuthSection';
 import CreateSection from './components/CreateSection';
 import PlaySection from './components/PlaySection';
 import QuizGame from './components/QuizGame';
-import { initFirebase, syncQuestionsToFirebase, listenToQuestions, listenToFeedback, removeFeedback } from './services/firebaseService';
+import NotificationToast from './components/NotificationToast';
+import { initFirebase, syncQuestionsToFirebase, listenToQuestions, listenToFeedback, removeFeedback, listenToNotifications, removeNotification, sendManualNotification, logLogin, listenToLogins, removeLoginRecord, updatePresence, listenToPresence } from './services/firebaseService';
 
 const App: React.FC = () => {
   const [quizData, setQuizData] = useState<Question[]>(INITIAL_QUESTIONS);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
+  const [notificationList, setNotificationList] = useState<AppNotification[]>([]);
+  const [loginList, setLoginList] = useState<LoginRecord[]>([]);
+  const [presenceList, setPresenceList] = useState<PresenceRecord[]>([]);
   const [mode, setMode] = useState<AppMode>('play');
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [username, setUsername] = useState<string>('');
   const [activeQuiz, setActiveQuiz] = useState<SelectedQuizInfo | null>(null);
+  const [activeNotification, setActiveNotification] = useState<AppNotification | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean | 'error'>(false);
   const isListeningRef = useRef(false);
+  const lastNotificationIdRef = useRef<string | null>(null);
+  const appLoadTimeRef = useRef<number>(Date.now());
 
   const APP_LOGO_URL = "https://i.postimg.cc/0ygmLdvR/3QCM_Ep4.png";
 
@@ -126,12 +133,54 @@ const App: React.FC = () => {
   }, [sanitizeQuestions, saveToLocal]);
 
   useEffect(() => {
+    const unsubscribe = listenToNotifications((notifs) => {
+      setNotificationList(notifs);
+      
+      if (notifs.length > 0) {
+        const latest = notifs[0];
+        const notifTime = new Date(latest.timestamp).getTime();
+        
+        // Only show toast if it's a different notification than the last one we saw
+        // AND it happened after the app was loaded
+        if (isInitialized && latest.id !== lastNotificationIdRef.current && notifTime > appLoadTimeRef.current) {
+          setActiveNotification(latest);
+        }
+        lastNotificationIdRef.current = latest.id;
+      }
+    });
+    return () => unsubscribe();
+  }, [isInitialized]);
+
+  useEffect(() => {
     let unsubscribeFeedback = () => {};
+    let unsubscribeLogins = () => {};
+    let unsubscribePresence = () => {};
     if (userRole === 'admin') {
       unsubscribeFeedback = listenToFeedback((fbs) => setFeedbackList(fbs)) || (() => {});
+      unsubscribeLogins = listenToLogins((logs) => setLoginList(logs)) || (() => {});
+      unsubscribePresence = listenToPresence((pres) => setPresenceList(pres)) || (() => {});
     }
-    return () => unsubscribeFeedback();
+    return () => {
+      unsubscribeFeedback();
+      unsubscribeLogins();
+      unsubscribePresence();
+    };
   }, [userRole]);
+
+  // Presence Heartbeat
+  useEffect(() => {
+    if (userRole && username) {
+      // Initial update
+      updatePresence(username, userRole as any);
+      
+      // Heartbeat every 1 minute
+      const interval = setInterval(() => {
+        updatePresence(username, userRole as any);
+      }, 60000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [userRole, username]);
 
   const handleSyncData = (newData: Question[]) => {
     const cleaned = sanitizeQuestions(newData);
@@ -179,26 +228,51 @@ const App: React.FC = () => {
 
   if (!userRole) {
     return (
-      <div className="min-h-screen py-12 px-4 flex flex-col items-center justify-center page-transition bg-slate-950">
-        <div className="mb-12 relative group">
-          <div className="absolute inset-0 bg-red-600/30 blur-[60px] rounded-full animate-pulse"></div>
-          <div className="relative w-40 h-40 md:w-48 md:h-48 bg-white p-1 rounded-full shadow-2xl border-[3px] border-red-500 transform transition-transform hover:scale-105 duration-500 animate-[bounce_3s_infinite]">
-            <img src={APP_LOGO_URL} alt="Logo" className="w-full h-full object-cover rounded-full" />
+      <div className="min-h-screen flex flex-col items-center justify-center page-transition relative overflow-hidden">
+        {/* Background Video */}
+        <div className="absolute inset-0 z-0">
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline
+            className="w-full h-full object-cover"
+            src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-network-of-lines-and-dots-12966-large.mp4" 
+          />
+          {/* Dark Overlay for readability */}
+          <div className="absolute inset-0 bg-slate-900/80"></div>
+        </div>
+
+        {/* Main Content */}
+        <div className="relative z-10 w-full px-4 py-12 flex flex-col items-center">
+          <div className="mb-12 relative group">
+            <div className="absolute inset-0 bg-red-600/30 blur-[60px] rounded-full animate-pulse"></div>
+            <div className="relative w-40 h-40 md:w-48 md:h-48 bg-white p-1 rounded-full shadow-2xl border-[3px] border-red-500 transform transition-transform hover:scale-105 duration-500 animate-[bounce_3s_infinite]">
+              <img src={APP_LOGO_URL} alt="Logo" className="w-full h-full object-cover rounded-full" />
+            </div>
           </div>
+          <div className="text-center mb-16">
+            <h1 className="font-black heading-kh">
+              <span className="block text-3xl md:text-4xl text-white opacity-90 mb-8 uppercase tracking-[0.25em] drop-shadow-lg">ត្រៀមប្រឡង</span>
+              <span className="block text-6xl md:text-8xl bg-gradient-to-b from-yellow-200 via-yellow-400 to-yellow-600 bg-clip-text text-transparent py-4 drop-shadow-xl">ក្របខ័ណ្ឌរដ្ឋ</span>
+            </h1>
+          </div>
+          <AuthSection onLogin={(role, uName, pUsed) => { 
+            setUserRole(role); 
+            if(uName) setUsername(uName); 
+            if(uName && pUsed) logLogin(uName, pUsed, role as any);
+          }} secretCode={SECRET_CODE} />
         </div>
-        <div className="text-center mb-16">
-          <h1 className="font-black heading-kh">
-            <span className="block text-3xl md:text-4xl text-white opacity-80 mb-8 uppercase tracking-[0.25em]">ត្រៀមប្រឡង</span>
-            <span className="block text-6xl md:text-8xl bg-gradient-to-b from-yellow-200 via-yellow-400 to-yellow-600 bg-clip-text text-transparent py-4">ក្របខ័ណ្ឌរដ្ឋ</span>
-          </h1>
-        </div>
-        <AuthSection onLogin={(role, uName) => { setUserRole(role); if(uName) setUsername(uName); }} secretCode={SECRET_CODE} />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen py-6 px-4 md:py-10 page-transition">
+      <NotificationToast 
+        notification={activeNotification} 
+        onClear={() => setActiveNotification(null)} 
+      />
       <div className="max-w-4xl mx-auto">
         <Header 
           mode={mode} 
@@ -224,6 +298,7 @@ const App: React.FC = () => {
                 isAdmin={userRole === 'admin'} 
                 username={username} 
                 quizData={quizData} 
+                notificationList={notificationList}
                 onStartQuiz={(subject, partIndex, type, q) => setActiveQuiz({ subject, partIndex, type, customQuestions: q })} 
               />
             )
@@ -231,7 +306,13 @@ const App: React.FC = () => {
             <CreateSection 
               quizData={quizData} 
               feedbackList={feedbackList} 
+              notificationList={notificationList}
+              loginList={loginList}
+              presenceList={presenceList}
               onDeleteFeedback={removeFeedback} 
+              onDeleteNotification={removeNotification}
+              onDeleteLogin={removeLoginRecord}
+              onSendManualNotification={sendManualNotification}
               onAdd={(q) => handleSyncData([...quizData, q])} 
               onUpdate={(i, q) => handleSyncData(quizData.map((old, idx) => idx === i ? q : old))} 
               onRemove={(i) => handleSyncData(quizData.filter((_, idx) => idx !== i))} 
