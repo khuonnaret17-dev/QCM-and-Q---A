@@ -16,7 +16,7 @@ export const generateQuizQuestions = async (subject: string, count: number = 5):
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: `Generate ${count} professional quiz questions about "${subject}" in Khmer. 
       Ensure questions are suitable for government state exam preparation.
       Output must be a JSON array of quiz objects.`,
