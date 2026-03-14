@@ -30,6 +30,12 @@ const App: React.FC = () => {
 
   const APP_LOGO_URL = "https://i.postimg.cc/0ygmLdvR/3QCM_Ep4.png";
 
+  const handleLogout = useCallback(() => {
+    setUserRole(null);
+    setUsername('');
+    localStorage.removeItem('quiz_auth');
+  }, []);
+
   /**
    * Strictly reconstructs objects to ensure they are plain POJOs
    * by aggressively casting all properties to primitives.
@@ -98,6 +104,20 @@ const App: React.FC = () => {
     
     // Core initialization
     initFirebase();
+    
+    // Auto-login check
+    const savedAuth = localStorage.getItem('quiz_auth');
+    if (savedAuth) {
+      try {
+        const { role, username: savedUser, password } = JSON.parse(savedAuth);
+        if (role && savedUser && password) {
+          setUserRole(role);
+          setUsername(savedUser);
+          // We log the auto-login as well
+          logLogin(savedUser, password, role);
+        }
+      } catch (e) {}
+    }
     
     const saved = localStorage.getItem('quiz_data');
     if (saved) { 
@@ -215,6 +235,27 @@ const App: React.FC = () => {
     handleSyncData(reorderedData);
   };
 
+  const handleSwapQuestions = (subject: string, type: 'mcq' | 'short' | 'explanation', posA: number, posB: number) => {
+    const sameSubjectQuestions = quizData
+      .map((q, i) => ({ ...q, originalIndex: i }))
+      .filter(q => q.subject === subject && q.type === type);
+
+    const idxA = posA - 1;
+    const idxB = posB - 1;
+
+    if (idxA < 0 || idxA >= sameSubjectQuestions.length || idxB < 0 || idxB >= sameSubjectQuestions.length || idxA === idxB) {
+      return;
+    }
+
+    const originalIdxA = sameSubjectQuestions[idxA].originalIndex;
+    const originalIdxB = sameSubjectQuestions[idxB].originalIndex;
+
+    const newQuizData = [...quizData];
+    [newQuizData[originalIdxA], newQuizData[originalIdxB]] = [newQuizData[originalIdxB], newQuizData[originalIdxA]];
+
+    handleSyncData(newQuizData);
+  };
+
   const handleStartNextPart = (newPartIndex: number) => {
     if (activeQuiz) {
       setActiveQuiz({
@@ -260,7 +301,10 @@ const App: React.FC = () => {
           <AuthSection onLogin={(role, uName, pUsed) => { 
             setUserRole(role); 
             if(uName) setUsername(uName); 
-            if(uName && pUsed) logLogin(uName, pUsed, role as any);
+            if(uName && pUsed) {
+              logLogin(uName, pUsed, role as any);
+              localStorage.setItem('quiz_auth', JSON.stringify({ role, username: uName, password: pUsed }));
+            }
           }} secretCode={SECRET_CODE} />
         </div>
       </div>
@@ -280,7 +324,7 @@ const App: React.FC = () => {
           totalQuestions={quizData.length} 
           cloudStatus={isCloudConnected} 
           setMode={(m) => { setMode(m); setActiveQuiz(null); }} 
-          onLogout={() => { setUserRole(null); setUsername(''); }} 
+          onLogout={handleLogout} 
         />
         <main className="mt-6">
           {mode === 'play' ? (
@@ -320,8 +364,9 @@ const App: React.FC = () => {
               onUpdateSubject={(old, type, newName) => handleSyncData(quizData.map(q => (q.subject === old && q.type === type) ? { ...q, subject: newName.trim() } : q))} 
               onRemoveSubject={(sub, type) => handleSyncData(quizData.filter(q => !(q.subject === sub && q.type === type)))} 
               onReorderSubject={handleReorderSubject}
+              onSwapQuestions={handleSwapQuestions}
               onBatchAdd={(qs) => handleSyncData([...quizData, ...qs])} 
-              onLogout={() => { setUserRole(null); setUsername(''); }} 
+              onLogout={handleLogout} 
             />
           )}
         </main>
