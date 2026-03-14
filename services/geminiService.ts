@@ -5,18 +5,11 @@ import { Question } from "../types";
 // Fix: Implement quiz question generation using the modern Gemini 3 SDK.
 // Upgraded model to 'gemini-3-pro-preview' as generating professional state exam questions in Khmer is a complex reasoning task.
 export const generateQuizQuestions = async (subject: string, count: number = 5): Promise<Question[]> => {
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    console.warn("Gemini API Key is missing. AI generation will not work.");
-    return [];
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-pro-preview',
       contents: `Generate ${count} professional quiz questions about "${subject}" in Khmer. 
       Ensure questions are suitable for government state exam preparation.
       Output must be a JSON array of quiz objects.`,

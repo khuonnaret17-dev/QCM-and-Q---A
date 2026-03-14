@@ -30,12 +30,6 @@ const App: React.FC = () => {
 
   const APP_LOGO_URL = "https://i.postimg.cc/0ygmLdvR/3QCM_Ep4.png";
 
-  const handleLogout = useCallback(() => {
-    setUserRole(null);
-    setUsername('');
-    localStorage.removeItem('quiz_auth');
-  }, []);
-
   /**
    * Strictly reconstructs objects to ensure they are plain POJOs
    * by aggressively casting all properties to primitives.
@@ -104,19 +98,13 @@ const App: React.FC = () => {
     
     // Core initialization
     initFirebase();
-    
-    // Auto-login check
-    const savedAuth = localStorage.getItem('quiz_auth');
-    if (savedAuth) {
-      try {
-        const { role, username: savedUser, password } = JSON.parse(savedAuth);
-        if (role && savedUser && password) {
-          setUserRole(role);
-          setUsername(savedUser);
-          // We log the auto-login as well
-          logLogin(savedUser, password, role);
-        }
-      } catch (e) {}
+
+    // Check for persisted session
+    const savedUser = localStorage.getItem('auth_username');
+    const savedRole = localStorage.getItem('auth_role');
+    if (savedUser && savedRole) {
+      setUsername(savedUser);
+      setUserRole(savedRole as UserRole);
     }
     
     const saved = localStorage.getItem('quiz_data');
@@ -300,11 +288,12 @@ const App: React.FC = () => {
           </div>
           <AuthSection onLogin={(role, uName, pUsed) => { 
             setUserRole(role); 
-            if(uName) setUsername(uName); 
-            if(uName && pUsed) {
-              logLogin(uName, pUsed, role as any);
-              localStorage.setItem('quiz_auth', JSON.stringify({ role, username: uName, password: pUsed }));
+            if(uName) {
+              setUsername(uName);
+              localStorage.setItem('auth_username', uName);
+              localStorage.setItem('auth_role', role || '');
             }
+            if(uName && pUsed) logLogin(uName, pUsed, role as any);
           }} secretCode={SECRET_CODE} />
         </div>
       </div>
@@ -321,10 +310,16 @@ const App: React.FC = () => {
         <Header 
           mode={mode} 
           role={userRole} 
+          username={username}
           totalQuestions={quizData.length} 
           cloudStatus={isCloudConnected} 
           setMode={(m) => { setMode(m); setActiveQuiz(null); }} 
-          onLogout={handleLogout} 
+          onLogout={() => { 
+            setUserRole(null); 
+            setUsername(''); 
+            localStorage.removeItem('auth_username');
+            localStorage.removeItem('auth_role');
+          }} 
         />
         <main className="mt-6">
           {mode === 'play' ? (
@@ -366,7 +361,12 @@ const App: React.FC = () => {
               onReorderSubject={handleReorderSubject}
               onSwapQuestions={handleSwapQuestions}
               onBatchAdd={(qs) => handleSyncData([...quizData, ...qs])} 
-              onLogout={handleLogout} 
+              onLogout={() => { 
+                setUserRole(null); 
+                setUsername(''); 
+                localStorage.removeItem('auth_username');
+                localStorage.removeItem('auth_role');
+              }} 
             />
           )}
         </main>
